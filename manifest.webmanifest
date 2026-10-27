@@ -1,0 +1,18 @@
+{
+  "name": "帶薪打卡鐘",
+  "short_name": "打卡鐘",
+  "description": "上下班打卡、下班倒數、尿尿拉屎抽菸計時,還有本月薪水即時累積。",
+  "lang": "zh-Hant",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#E6ECE7",
+  "theme_color": "#E6ECE7",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

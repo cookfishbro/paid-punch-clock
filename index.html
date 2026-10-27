@@ -1,0 +1,1736 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E6ECE7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1311" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="打卡鐘">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<title>帶薪打卡鐘</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<style>
+/* Layout: one punched time card. Printed sage-green form rules, times stamped in violet dot-matrix ink,
+   three punch-slot keys for breaks; below it the back of the card: timeline, summary, stacked history. */
+:root{
+  --paper:#E6ECE7; --card:#F9FBF7; --card-2:#F1F5F0;
+  --ink:#1B2620; --ink-2:#4A5B51; --ink-3:#6E8276;
+  --rule:#D5E0D8; --rule-2:#AFC6B8; --grid:rgba(44,122,99,.075);
+  --print:#2C7A63; --stamp:#4B3BA8; --on-stamp:#FFFFFF; --stamp-wash:#ECE9F8;
+  --shift:#D3E5DA; --lane:#EDF2EE;
+  --pee:#C99000; --poop:#9C5410; --smoke:#3F78C4;
+  --pay:#23805F; --pay-wash:#DAEDE3; --pay-soft:#A3D6C1;
+  --occ:#C2332B; --occ-bg:#FBE4E1; --danger:#B3261E;
+  --hover:#EEF3EF; --input:#FFFFFF; --tip-bg:#1B2620; --tip-fg:#F3F7F4;
+  --shadow:0 1px 0 rgba(27,38,32,.05), 0 10px 28px -16px rgba(27,38,32,.25);
+  --f-ui:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-stamp:"DotGothic16","Noto Sans TC",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#0F1311; --card:#1A201C; --card-2:#151A17;
+  --ink:#E3EAE5; --ink-2:#A7B5AC; --ink-3:#7A8C81;
+  --rule:#2A332E; --rule-2:#3E4C44; --grid:rgba(108,195,166,.05);
+  --print:#6CC3A6; --stamp:#B0A3FF; --on-stamp:#17122E; --stamp-wash:#262242;
+  --shift:#2A3A31; --lane:#202722;
+  --pee:#BA8C0E; --poop:#9C4A22; --smoke:#5A8BDE;
+  --pay:#5CC49C; --pay-wash:#1F3A2E; --pay-soft:#2F6E58;
+  --occ:#FF8A80; --occ-bg:#3A1F1D; --danger:#FF8A80;
+  --hover:#222A25; --input:#141916; --tip-bg:#E3EAE5; --tip-fg:#141916;
+  --shadow:0 1px 0 rgba(0,0,0,.3), 0 12px 30px -18px rgba(0,0,0,.7);
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --paper:#0F1311; --card:#1A201C; --card-2:#151A17;
+  --ink:#E3EAE5; --ink-2:#A7B5AC; --ink-3:#7A8C81;
+  --rule:#2A332E; --rule-2:#3E4C44; --grid:rgba(108,195,166,.05);
+  --print:#6CC3A6; --stamp:#B0A3FF; --on-stamp:#17122E; --stamp-wash:#262242;
+  --shift:#2A3A31; --lane:#202722;
+  --pee:#BA8C0E; --poop:#9C4A22; --smoke:#5A8BDE;
+  --pay:#5CC49C; --pay-wash:#1F3A2E; --pay-soft:#2F6E58;
+  --occ:#FF8A80; --occ-bg:#3A1F1D; --danger:#FF8A80;
+  --hover:#222A25; --input:#141916; --tip-bg:#E3EAE5; --tip-fg:#141916;
+  --shadow:0 1px 0 rgba(0,0,0,.3), 0 12px 30px -18px rgba(0,0,0,.7);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{background:var(--paper);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+img{max-width:100%}
+button,.badge,.pc,.g-row{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.punch-btn,.brk,.pc{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.app{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.install{padding:14px 18px;display:grid;gap:4px;border-style:dashed;border-color:var(--stamp);background:var(--stamp-wash)}
+.install strong{font-size:15px}
+.install span{font-size:13.5px;color:var(--ink-2)}
+.install .row{margin-top:4px}
+.data-row{display:flex;flex-wrap:wrap;gap:8px}
+.imp-sum{margin:0;font-size:13.5px;color:var(--ink-2)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--stamp);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.app{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:grid;gap:16px}
+@media (min-width:720px){.app{padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));padding-block:28px 64px;gap:18px}}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 16px}
+.eyebrow,.print-label{font-size:11px;letter-spacing:.16em;color:var(--print);font-weight:700}
+h1{margin:0;font-size:clamp(28px,4.4vw,38px);font-weight:900;letter-spacing:.04em;line-height:1.15;text-wrap:balance}
+h2{margin:0;font-size:18px;font-weight:700;line-height:1.3;text-wrap:balance}
+h3{margin:0;font-size:18px;font-weight:700}
+.top-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.date{font-family:var(--f-stamp);color:var(--stamp);font-size:20px;line-height:1}
+.chip{font-size:12px;padding:3px 10px;border-radius:999px;border:1px solid var(--rule-2);color:var(--ink-2);background:var(--card);white-space:nowrap}
+.chip.cloud::before,.chip.local::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:1px;background:var(--print)}
+.chip.local::before{background:var(--ink-3)}
+
+/* buttons */
+.btn{font-size:14px;border:1px solid var(--rule-2);background:var(--card);padding:7px 14px;border-radius:8px;cursor:pointer;line-height:1.3;white-space:nowrap}
+.btn:hover{background:var(--hover)}
+.btn.small{font-size:13px;padding:5px 11px}
+.btn.primary{background:var(--stamp);border-color:var(--stamp);color:var(--on-stamp)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--ink-2)}
+.btn.ghost:hover{background:var(--hover)}
+.btn.danger{color:var(--danger);border-color:currentColor;background:transparent}
+.link{border:0;background:none;padding:0;color:var(--stamp);text-decoration:underline;text-underline-offset:3px;cursor:pointer;font-size:inherit}
+
+.card{background:var(--card);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow)}
+.sec{padding:18px;display:grid;gap:14px;min-width:0}
+@media (min-width:720px){.sec{padding:22px 24px}}
+.sec-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 14px}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.hint{font-size:12.5px;color:var(--ink-3)}
+
+/* stale banner */
+.banner{padding:14px 18px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;border-color:var(--rule-2);background:var(--stamp-wash)}
+.banner-txt{display:grid;gap:2px;min-width:0}
+.banner-txt span{font-size:13px;color:var(--ink-2)}
+
+/* today card */
+.today{overflow:hidden}
+.clock{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px 28px;align-items:center;padding:22px 18px 20px;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:26px 26px;border-bottom:1px solid var(--rule)}
+@media (min-width:720px){.clock{padding:26px 24px 24px}}
+.cd{display:grid;gap:8px;min-width:0}
+.cd-label{font-weight:700;color:var(--ink-2);font-size:14px;letter-spacing:.04em}
+.cd-value{font-family:var(--f-stamp);color:var(--stamp);font-size:clamp(50px,11vw,100px);line-height:.95;letter-spacing:.01em;white-space:nowrap}
+.cd-sub{display:flex;flex-wrap:wrap;gap:4px 18px;color:var(--ink-2);font-size:13px}
+.cd-sub b{font-family:var(--f-stamp);font-weight:400;color:var(--stamp);font-size:17px;margin-left:4px}
+.progress{height:6px;border-radius:99px;background:var(--shift);overflow:hidden;max-width:520px}
+.progress i{display:block;height:100%;width:0;background:var(--stamp);border-radius:99px}
+.punch{display:grid;gap:6px;justify-items:center}
+.punch-btn{font-weight:900;font-size:26px;letter-spacing:.32em;text-indent:.32em;min-width:176px;padding:20px 26px;border-radius:12px;
+  border:2px solid var(--stamp);background:var(--stamp);color:var(--on-stamp);cursor:pointer;
+  box-shadow:inset 0 -5px 0 rgba(0,0,0,.2);transition:transform .08s ease,box-shadow .08s ease}
+.punch-btn:active:not([disabled]){transform:translateY(2px);box-shadow:inset 0 -2px 0 rgba(0,0,0,.2)}
+.punch-btn.out{background:var(--card);color:var(--stamp);box-shadow:inset 0 -5px 0 var(--stamp-wash)}
+.punch-btn[disabled]{cursor:default;opacity:.6}
+.punch-cap{font-size:11.5px;color:var(--ink-3);letter-spacing:.08em}
+@media (max-width:620px){
+  .clock{grid-template-columns:minmax(0,1fr)}
+  .punch{justify-items:stretch}
+  .punch-btn{width:100%}
+}
+
+.breaks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:16px 18px}
+@media (min-width:720px){.breaks{gap:14px;padding:18px 24px}}
+.brk{--c:var(--pee);position:relative;text-align:left;display:grid;align-content:start;gap:3px;padding:14px 14px 13px;border-radius:12px;
+  border:1.5px solid var(--rule-2);background:var(--card);cursor:pointer;min-width:0;min-height:128px;transition:border-color .15s ease,background .15s ease}
+.brk[data-type="poop"]{--c:var(--poop)} .brk[data-type="smoke"]{--c:var(--smoke)}
+.brk:hover:not([disabled]){border-color:var(--c)}
+.brk[disabled]{cursor:default;opacity:.6}
+.brk .emo{font-size:26px;line-height:1.1}
+.brk .nm{font-weight:700;font-size:17px;display:flex;align-items:center;gap:7px}
+.brk .nm::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
+.brk .meta{font-size:12.5px;color:var(--ink-2);overflow-wrap:anywhere}
+.brk .kbd{position:absolute;top:10px;right:10px;font-family:var(--f-stamp);font-size:12px;color:var(--ink-3);border:1px solid var(--rule-2);border-radius:4px;padding:0 6px;line-height:1.5}
+.brk .live{font-family:var(--f-stamp);font-size:28px;line-height:1.1;color:var(--ink)}
+.brk .earn{font-size:12.5px;font-weight:700;color:var(--ink)}
+.brk.on{border-color:var(--c);background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--c) 17%,var(--card)) 0 10px,color-mix(in srgb,var(--c) 9%,var(--card)) 10px 20px)}
+.occupied{display:inline-flex;align-items:center;gap:6px;width:max-content;font-size:11.5px;font-weight:700;letter-spacing:.06em;padding:1px 9px;border-radius:99px;background:var(--occ-bg);color:var(--occ)}
+.occupied::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;animation:blink 1.2s steps(2,start) infinite}
+@keyframes blink{50%{opacity:.25}}
+@media (max-width:460px){
+  .breaks{gap:8px;padding:12px 12px}
+  .brk{padding:11px 10px;min-height:118px}
+  .brk .emo{font-size:22px}
+  .brk .nm{font-size:15px}
+  .brk .live{font-size:22px}
+  .brk .kbd{display:none}
+}
+@media (hover:none){.brk .kbd{display:none}}
+
+.today-foot{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding:14px 18px 16px;border-top:1px solid var(--rule);background:var(--card-2)}
+@media (min-width:720px){.today-foot{padding:14px 24px 16px}}
+.paid{flex:1 1 280px;min-width:0;font-size:14px;color:var(--ink-2)}
+.paid b{color:var(--ink);font-weight:700}
+.badges{display:flex;flex-wrap:wrap;gap:6px}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 9px 3px 7px;border-radius:99px;border:1px dashed var(--rule-2);color:var(--ink-3);background:transparent;cursor:default}
+.badge .e{filter:grayscale(1);opacity:.55}
+.badge.on{border-style:solid;border-color:var(--stamp);color:var(--ink);background:var(--stamp-wash)}
+.badge.on .e{filter:none;opacity:1}
+
+/* payroll */
+.pay-state{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;letter-spacing:.04em;padding:3px 10px;border-radius:99px;background:var(--pay-wash);color:var(--pay);white-space:nowrap}
+.pay-state::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.pay-state.live::before{animation:blink 1.2s steps(2,start) infinite}
+.pay-state.idle{background:var(--lane);color:var(--ink-2)}
+.pay-body{display:grid;gap:16px;min-width:0}
+.pay-main{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:14px 32px;align-items:end}
+@media (max-width:680px){.pay-main{grid-template-columns:minmax(0,1fr)}}
+.pay-val{font-family:var(--f-stamp);color:var(--pay);font-size:clamp(38px,8.5vw,64px);line-height:1;white-space:nowrap;display:flex;align-items:baseline;gap:.14em}
+.pay-val .cur{font-size:.4em;color:var(--ink-2)}
+.pay-val .dec{font-size:.55em;color:var(--ink-3)}
+.pay-sub{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:13px;color:var(--ink-2);margin-top:10px}
+.pay-sub b,.pay-goal-txt b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+.pay-goal{display:grid;gap:8px;min-width:0}
+.pay-bar{height:10px;border-radius:99px;background:var(--pay-wash);overflow:hidden}
+.pay-bar i{display:block;height:100%;width:0;background:var(--pay);border-radius:99px}
+.pay-goal-txt{display:flex;flex-wrap:wrap;gap:2px 16px;font-size:13px;color:var(--ink-2)}
+.pay-strip{min-width:0}
+.pay-cal,.pay-days{display:grid;grid-template-columns:repeat(var(--n,31),minmax(0,1fr));gap:3px}
+.pc{height:46px;min-width:0;border:0;padding:0;border-radius:4px;background:var(--lane);display:flex;align-items:flex-end;overflow:hidden;cursor:pointer}
+.pc i{display:block;width:100%;height:0;background:var(--pay-soft)}
+.pc.rec i{background:var(--pay)}
+.pc.fut{background:transparent;border:1px dashed var(--rule-2);cursor:default}
+.pc:not(.fut):hover{box-shadow:0 0 0 2px var(--pay)}
+.pc.today,.pc.today:hover{box-shadow:0 0 0 2px var(--stamp)}
+.pay-days{margin-top:5px}
+.pay-days span{display:flex;justify-content:center;font-size:10.5px;color:var(--ink-3);white-space:nowrap;font-variant-numeric:tabular-nums}
+.pay-days span.t{color:var(--stamp);font-weight:700}
+@media (max-width:460px){.pay-cal,.pay-days{gap:2px}.pc{height:40px;border-radius:3px}}
+.sw.fut{background:transparent;border:1px dashed var(--rule-2)}
+.pay-empty{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;border:1px dashed var(--rule-2);border-radius:10px;padding:14px 16px}
+.pay-empty p{margin:0;font-size:14px;color:var(--ink-2);flex:1 1 260px}
+
+/* timeline */
+.tl{position:relative;padding-top:4px;padding-bottom:20px;min-width:0}
+.tl-axis{position:relative;height:20px;margin-bottom:4px}
+.tl-tick{position:absolute;top:0;transform:translateX(-50%);font-family:var(--f-stamp);font-size:12px;color:var(--ink-3);white-space:nowrap}
+.tl-tick.first{transform:none}
+.tl-tick.last{transform:translateX(-100%)}
+@media (max-width:620px){.tl-tick.odd{visibility:hidden}}
+@media (max-width:520px){.c-range{display:none}}
+.tl-lane{position:relative;height:56px;border-radius:9px;background:var(--lane)}
+.tl-grid{position:absolute;top:0;bottom:0;width:1px;background:var(--rule)}
+.tl-shift{position:absolute;top:0;bottom:0;background:var(--shift);border-radius:9px;border:0;padding:0;cursor:pointer}
+.tl-plan{position:absolute;top:0;bottom:0;border:1.5px dashed var(--rule-2);border-left:0;border-radius:0 9px 9px 0;pointer-events:none}
+.tl-target{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--print);border-radius:2px;pointer-events:none}
+.tl-seg{position:absolute;top:9px;bottom:9px;min-width:4px;border:0;padding:0;border-radius:4px;background:var(--c);box-shadow:0 0 0 2px var(--shift);cursor:pointer;z-index:2}
+.tl-seg:hover,.tl-seg:focus-visible{top:5px;bottom:5px}
+.tl-seg.live{background:repeating-linear-gradient(135deg,var(--c) 0 6px,color-mix(in srgb,var(--c) 70%,var(--card)) 6px 12px)}
+.tl-now{position:absolute;top:-6px;bottom:-6px;width:2px;margin-left:-1px;background:var(--stamp);z-index:3;pointer-events:none}
+.tl-now::after{content:"現在";position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10.5px;font-weight:700;color:var(--stamp);white-space:nowrap}
+.tl-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:0 12px;text-align:center;font-size:13px;color:var(--ink-3)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--ink-2);margin-top:4px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border-radius:3px;background:var(--c,var(--shift));flex:none;display:inline-block}
+.sw.plan{background:transparent;border:1.5px dashed var(--rule-2)}
+.sw.line{width:2px;height:14px;border-radius:1px;background:var(--stamp)}
+.sw.target{width:2px;height:14px;border-radius:1px;background:var(--print)}
+
+.tablewrap{overflow-x:auto;min-width:0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--print);text-align:left;padding:6px 10px;border-bottom:1.5px solid var(--rule-2);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--rule);vertical-align:middle;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.stampcell{font-family:var(--f-stamp);color:var(--stamp);font-size:16px}
+.item{display:inline-flex;align-items:center;gap:7px;font-weight:500}
+.muted{color:var(--ink-3)}
+.empty{margin:0;font-size:13.5px;color:var(--ink-3)}
+
+/* stats */
+.filters{display:flex;flex-wrap:wrap;gap:4px;padding:3px;border-radius:10px;background:var(--lane);border:1px solid var(--rule)}
+.seg-btn{border:0;background:transparent;padding:5px 12px;border-radius:7px;font-size:13px;cursor:pointer;color:var(--ink-2)}
+.seg-btn:hover{color:var(--ink)}
+.seg-btn[aria-pressed="true"]{background:var(--card);color:var(--ink);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.sample-note{justify-self:start;font-size:12.5px;color:var(--stamp);border:1px dashed var(--stamp);border-radius:8px;padding:3px 10px;background:var(--stamp-wash)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(190px,100%),1fr));gap:10px}
+.tile{border:1px solid var(--rule);border-radius:10px;padding:12px 14px;display:grid;gap:1px;align-content:start;min-width:0}
+.tile .lbl{font-size:12.5px;color:var(--ink-2)}
+.tile .val{font-size:24px;font-weight:700;line-height:1.3;overflow-wrap:anywhere}
+.tile .sub{font-size:12px;color:var(--ink-3)}
+.fun{margin:0;font-size:13.5px;color:var(--ink-2)}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:14px 22px}
+figure{margin:0;min-width:0}
+figcaption{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin-bottom:10px}
+figcaption b{font-size:14.5px}
+figcaption span{font-size:12px;color:var(--ink-3)}
+.cc{display:grid;grid-template-columns:30px minmax(0,1fr);grid-template-rows:160px auto;column-gap:6px}
+.cc-y{position:relative}
+.cc-yl{position:absolute;right:0;transform:translateY(50%);font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums;line-height:1}
+.cc-plot{position:relative;border-bottom:1px solid var(--rule-2)}
+.cc-grid{position:absolute;left:0;right:0;height:1px;background:var(--rule)}
+.cc-bars{position:absolute;inset:0;display:flex;justify-content:space-around;align-items:stretch;gap:2px}
+.cc-col{flex:1 1 0;min-width:2px;max-width:24px;display:flex;align-items:flex-end;cursor:default;border-radius:4px 4px 0 0}
+.cc-col:hover .cc-stack,.cc-col:focus-visible .cc-stack{filter:brightness(1.12)}
+.cc-col:hover,.cc-col:focus-visible{background:var(--stamp-wash)}
+.cc-stack{width:100%;display:flex;flex-direction:column-reverse;gap:2px;border-radius:4px 4px 0 0;overflow:hidden}
+.cc-stack i{display:block;min-height:2px;background:var(--c)}
+.cc-x{grid-column:2;display:flex;justify-content:space-around;gap:2px;padding-top:5px}
+.cc-x span{flex:1 1 0;min-width:2px;max-width:24px;display:flex;justify-content:center;white-space:nowrap;font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.chart-legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--ink-2)}
+.chart-legend span{display:inline-flex;align-items:center;gap:6px}
+table.tt td:first-child{font-weight:500}
+
+/* history */
+.gantt{display:grid;gap:5px;min-width:0}
+.g-row{display:grid;grid-template-columns:92px minmax(0,1fr) 70px;gap:12px;align-items:center;border:0;background:transparent;padding:3px 6px;margin:0 -6px;border-radius:8px;text-align:left;cursor:pointer}
+button.g-row:hover:not([disabled]){background:var(--hover)}
+.g-row[disabled]{cursor:default}
+.g-row.sel{background:var(--stamp-wash)}
+.g-head{cursor:default;padding-block:0}
+.g-date{font-family:var(--f-stamp);color:var(--stamp);font-size:15px;white-space:nowrap}
+.g-wd{font-family:var(--f-ui);font-size:11.5px;color:var(--ink-3)}
+.g-track{position:relative;height:22px;border-radius:6px;background:var(--lane)}
+.g-track .tl-grid{background:var(--rule)}
+.g-shift{position:absolute;top:0;bottom:0;background:var(--shift);border-radius:6px}
+.g-seg{position:absolute;top:4px;bottom:4px;min-width:3px;border-radius:2px;background:var(--c);box-shadow:0 0 0 1.5px var(--shift)}
+.g-tot{font-size:12.5px;color:var(--ink-2);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.g-axis{position:relative;height:16px}
+.g-axis .tl-tick{font-size:11px}
+@media (max-width:560px){.g-row{grid-template-columns:62px minmax(0,1fr) 52px;gap:8px}.g-date{font-size:13px}}
+.more{justify-self:start}
+
+.foot{font-size:12.5px;color:var(--ink-3);text-align:center;padding-top:4px}
+
+/* tooltip, toast, dialogs */
+.tip{position:fixed;z-index:50;pointer-events:none;background:var(--tip-bg);color:var(--tip-fg);padding:8px 11px;border-radius:8px;font-size:12.5px;line-height:1.45;max-width:260px;box-shadow:0 8px 24px -8px rgba(0,0,0,.45)}
+.tip .v{font-weight:700;font-size:14.5px}
+.tip .l{opacity:.85}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;background:var(--tip-bg);color:var(--tip-fg);padding:10px 16px;border-radius:10px;font-size:14px;max-width:calc(100vw - 32px);box-shadow:0 10px 30px -10px rgba(0,0,0,.5)}
+dialog{border:1px solid var(--rule-2);border-radius:14px;background:var(--card);color:var(--ink);padding:0;width:min(460px,calc(100vw - 32px));box-shadow:0 24px 60px -20px rgba(0,0,0,.5)}
+dialog::backdrop{background:rgba(15,20,17,.5)}
+.dlg{padding:20px;display:grid;gap:14px}
+.field{display:grid;gap:5px}
+.field label{font-size:13px;color:var(--ink-2);font-weight:500}
+.field small{font-size:12px;color:var(--ink-3)}
+input,select,textarea{font:inherit;font-size:15px;padding:8px 10px;border-radius:8px;border:1px solid var(--rule-2);background:var(--input);color:var(--ink);min-width:0;width:100%}
+.banner input{width:auto}
+textarea{min-height:170px;resize:vertical;font-size:14px}
+.dlg-act{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.spacer{flex:1}
+.err{margin:0;color:var(--danger);font-size:13px}
+.store-note{font-size:12.5px;color:var(--ink-2);background:var(--lane);border-radius:8px;padding:9px 11px}
+
+@keyframes thunk{0%{transform:scale(1.3) rotate(-4deg);opacity:0}60%{transform:scale(.97) rotate(-1deg);opacity:1}100%{transform:none;opacity:1}}
+.thunk{animation:thunk .38s cubic-bezier(.2,.8,.3,1) both;transform-origin:left center}
+@media (prefers-reduced-motion:reduce){.thunk,.occupied::before,.pay-state.live::before{animation:none}.brk,.punch-btn{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="install card" id="install" hidden>
+    <strong>裝到主畫面,就是一個 App</strong>
+    <span>在 Safari 點下方的分享按鈕 <b>⬆︎</b>,往下滑選「加入主畫面」。之後從主畫面的「打卡鐘」圖示打開,沒網路也能用。</span>
+    <div class="row"><button class="btn small ghost" id="install-x" type="button">知道了</button></div>
+  </div>
+
+  <header class="top">
+    <div>
+      <div class="eyebrow">考勤卡 · TIME CARD</div>
+      <h1>帶薪打卡鐘</h1>
+    </div>
+    <div class="top-meta">
+      <span class="date" id="hdr-date"></span>
+      <span class="chip" id="sync-chip">連線中…</span>
+      <button class="btn small" id="btn-settings" type="button">設定</button>
+    </div>
+  </header>
+
+  <div class="banner card" id="stale" hidden>
+    <div class="banner-txt"><strong id="stale-title"></strong><span>補上下班時間,工時和統計才會準。</span></div>
+    <div class="row">
+      <label class="sr" for="stale-end">下班時間</label>
+      <input type="datetime-local" id="stale-end">
+      <button class="btn primary" id="stale-save" type="button">補登下班</button>
+      <button class="btn ghost" id="stale-skip" type="button">我還在上班</button>
+    </div>
+  </div>
+
+  <section class="card today" aria-label="今日考勤">
+    <div class="clock">
+      <div class="cd">
+        <div class="cd-label" id="cd-label">還沒上班</div>
+        <div class="cd-value" id="cd-value">--:--:--</div>
+        <div class="progress" id="cd-prog" hidden><i></i></div>
+        <div class="cd-sub" id="cd-sub"></div>
+      </div>
+      <div class="punch">
+        <button class="punch-btn" id="punch" type="button" disabled>上班</button>
+        <span class="punch-cap" id="punch-cap">打卡</span>
+        <button class="btn ghost small" id="unpunch" type="button" hidden>撤銷下班</button>
+      </div>
+    </div>
+    <div class="breaks">
+      <button class="brk" data-type="pee" type="button" aria-pressed="false" disabled>
+        <span class="kbd" aria-hidden="true">1</span>
+        <span class="emo" aria-hidden="true">💦</span>
+        <span class="nm">尿尿</span>
+        <span class="occupied" hidden>使用中</span>
+        <span class="live" hidden></span>
+        <span class="earn" hidden></span>
+        <span class="meta"></span>
+      </button>
+      <button class="brk" data-type="poop" type="button" aria-pressed="false" disabled>
+        <span class="kbd" aria-hidden="true">2</span>
+        <span class="emo" aria-hidden="true">💩</span>
+        <span class="nm">拉屎</span>
+        <span class="occupied" hidden>使用中</span>
+        <span class="live" hidden></span>
+        <span class="earn" hidden></span>
+        <span class="meta"></span>
+      </button>
+      <button class="brk" data-type="smoke" type="button" aria-pressed="false" disabled>
+        <span class="kbd" aria-hidden="true">3</span>
+        <span class="emo" aria-hidden="true">🚬</span>
+        <span class="nm">抽菸</span>
+        <span class="occupied" hidden>使用中</span>
+        <span class="live" hidden></span>
+        <span class="earn" hidden></span>
+        <span class="meta"></span>
+      </button>
+    </div>
+    <div class="today-foot">
+      <div class="paid"><span id="paid"></span> <button class="link" id="paid-setup" type="button" hidden>填月薪,算算帶薪如廁賺多少</button></div>
+      <div class="badges" id="badges"></div>
+      <button class="btn small" id="btn-share" type="button">複製今日戰績</button>
+    </div>
+  </section>
+
+  <section class="card sec" aria-labelledby="pay-h">
+    <div class="sec-head">
+      <div><div class="print-label">薪水 PAYROLL</div><h2 id="pay-h">本月薪水累積</h2></div>
+      <span class="pay-state idle" id="pay-state" hidden></span>
+    </div>
+    <div class="pay-empty" id="pay-empty" hidden>
+      <p>填上月薪,這裡就會一秒一秒跳出這個月已經賺到多少,不用打卡也會自己算。</p>
+      <button class="btn primary" id="pay-setup" type="button">填月薪</button>
+    </div>
+    <div class="pay-body" id="pay-body">
+      <div class="pay-main">
+        <div>
+          <div class="pay-val" aria-live="off"><span class="cur">NT$</span><span id="pay-amt">—</span><span class="dec" id="pay-dec"></span></div>
+          <div class="pay-sub" id="pay-sub"></div>
+        </div>
+        <div class="pay-goal">
+          <div class="pay-bar" id="pay-bar"><i></i></div>
+          <div class="pay-goal-txt" id="pay-goal"></div>
+        </div>
+      </div>
+      <div class="pay-strip">
+        <div class="pay-cal" id="pay-cal"></div>
+        <div class="pay-days" id="pay-days" aria-hidden="true"></div>
+        <div class="legend">
+          <span><i class="sw" style="--c:var(--pay)"></i>有打卡的日子</span>
+          <span><i class="sw" style="--c:var(--pay-soft)"></i>沒打卡,薪水照樣入帳</span>
+          <span><i class="sw fut"></i>還沒到</span>
+          <span class="hint">點一格看那天的紀錄,沒紀錄的可以補登</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card sec" aria-labelledby="tl-h">
+    <div class="sec-head">
+      <div><div class="print-label">時間軸 TIMELINE</div><h2 id="tl-h">今天</h2></div>
+      <div class="row">
+        <button class="btn small ghost" id="tl-today" type="button" hidden>回到今天</button>
+        <button class="btn small" id="tl-add" type="button">＋ 補登一筆</button>
+      </div>
+    </div>
+    <div>
+      <div class="tl" id="tl"></div>
+      <div class="legend">
+        <span><i class="sw"></i>上班中</span>
+        <span><i class="sw" style="--c:var(--pee)"></i>尿尿</span>
+        <span><i class="sw" style="--c:var(--poop)"></i>拉屎</span>
+        <span><i class="sw" style="--c:var(--smoke)"></i>抽菸</span>
+        <span><i class="sw plan"></i>離下班還有</span>
+        <span><i class="sw target"></i>表定下班</span>
+        <span><i class="sw line"></i>現在</span>
+      </div>
+    </div>
+    <div class="tablewrap"><table class="log" id="log"></table></div>
+    <p class="empty" id="log-empty" hidden></p>
+  </section>
+
+  <section class="card sec" aria-labelledby="st-h">
+    <div class="sec-head">
+      <div><div class="print-label">統計 SUMMARY</div><h2 id="st-h">帶薪摸魚報告</h2></div>
+      <div class="filters" role="group" aria-label="統計期間">
+        <button class="seg-btn" type="button" data-range="7" aria-pressed="true">近 7 天</button>
+        <button class="seg-btn" type="button" data-range="30" aria-pressed="false">近 30 天</button>
+        <button class="seg-btn" type="button" data-range="90" aria-pressed="false">近 90 天</button>
+        <button class="seg-btn" type="button" data-range="all" aria-pressed="false">全部</button>
+      </div>
+    </div>
+    <div class="sample-note" id="sample-note" hidden>範例預覽 · 開始打卡後就換成你的資料</div>
+    <div class="tiles" id="tiles"></div>
+    <p class="fun" id="fun"></p>
+    <div class="chart-legend">
+      <span><i class="sw" style="--c:var(--pee)"></i>尿尿</span>
+      <span><i class="sw" style="--c:var(--poop)"></i>拉屎</span>
+      <span><i class="sw" style="--c:var(--smoke)"></i>抽菸</span>
+    </div>
+    <div class="charts">
+      <figure><figcaption><b>每天摸魚幾分鐘</b><span>依類別堆疊</span></figcaption><div id="ch-daily"></div></figure>
+      <figure><figcaption><b>最常幾點去</b><span>每小時開始的次數</span></figcaption><div id="ch-hour"></div></figure>
+    </div>
+    <div class="tablewrap"><table class="tt" id="types"></table></div>
+  </section>
+
+  <section class="card sec" aria-labelledby="g-h">
+    <div class="sec-head">
+      <div><div class="print-label">歷史 HISTORY</div><h2 id="g-h">考勤卡疊起來看</h2></div>
+      <span class="hint" id="g-hint">點一天,就會在上方時間軸打開</span>
+    </div>
+    <div class="gantt" id="gantt"></div>
+  </section>
+
+  <p class="foot">每次按鍵都記下真實時間戳。App 關掉、手機鎖屏再打開,時間照算。</p>
+</div>
+
+<div class="tip" id="tip" hidden></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<dialog id="dlg-edit" aria-labelledby="ed-h">
+  <form class="dlg" id="ed-form">
+    <h3 id="ed-h">編輯紀錄</h3>
+    <div class="field" id="ed-type-f">
+      <label for="ed-type">類別</label>
+      <select id="ed-type">
+        <option value="pee">💦 尿尿</option>
+        <option value="poop">💩 拉屎</option>
+        <option value="smoke">🚬 抽菸</option>
+      </select>
+    </div>
+    <div class="field"><label for="ed-start" id="ed-start-l">開始</label><input type="datetime-local" id="ed-start"></div>
+    <div class="field"><label for="ed-end" id="ed-end-l">結束</label><input type="datetime-local" id="ed-end"><small id="ed-end-hint">留空代表還在進行中</small></div>
+    <div class="field" id="ed-hours-f"><label for="ed-hours">這天的工時(小時,含午休)</label><input type="number" id="ed-hours" min="1" max="24" step="0.5"></div>
+    <p class="err" id="ed-err" hidden></p>
+    <div class="dlg-act">
+      <button class="btn danger" type="button" id="ed-del">刪除</button>
+      <span class="spacer"></span>
+      <button class="btn ghost" type="button" id="ed-cancel">取消</button>
+      <button class="btn primary" type="submit">儲存</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-set" aria-labelledby="set-h">
+  <form class="dlg" id="set-form">
+    <h3 id="set-h">設定</h3>
+    <div class="field">
+      <label for="set-hours">每天工時(小時,含午休)</label>
+      <input type="number" id="set-hours" min="1" max="24" step="0.5">
+      <small>打上班卡後,下班倒數就從這個長度開始算。會套用到正在上的班和之後的班。</small>
+    </div>
+    <div class="field">
+      <label for="set-salary">月薪 NT$(選填)</label>
+      <input type="number" id="set-salary" min="0" step="1000" inputmode="numeric" placeholder="例如 45000">
+      <small id="set-rate"></small>
+    </div>
+    <div class="field">
+      <label>資料</label>
+      <div class="store-note" id="set-store"></div>
+      <div class="data-row">
+        <button class="btn small" type="button" id="set-backup">備份全部資料</button>
+        <button class="btn small" type="button" id="set-import">匯入資料</button>
+        <button class="btn small" type="button" id="set-export">匯出 CSV</button>
+      </div>
+    </div>
+    <div class="dlg-act">
+      <span class="spacer"></span>
+      <button class="btn ghost" type="button" id="set-cancel">取消</button>
+      <button class="btn primary" type="submit">儲存</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-imp" aria-labelledby="imp-h">
+  <div class="dlg">
+    <h3 id="imp-h">匯入資料</h3>
+    <p class="imp-sum">在網頁版的「設定」按「複製資料到 App」,再貼到下面。也可以選備份檔(.json)或匯出的 CSV。</p>
+    <label class="sr" for="imp-text">貼上資料</label>
+    <textarea id="imp-text" placeholder="貼上從網頁版複製的資料"></textarea>
+    <div class="field">
+      <label for="imp-file">或選一個檔案</label>
+      <input type="file" id="imp-file" accept=".json,.csv,application/json,text/csv,text/plain">
+    </div>
+    <p class="imp-sum" id="imp-sum" hidden></p>
+    <p class="err" id="imp-err" hidden></p>
+    <div class="dlg-act">
+      <span class="spacer"></span>
+      <button class="btn ghost" type="button" id="imp-cancel">取消</button>
+      <button class="btn primary" type="button" id="imp-go" disabled>匯入</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dlg-share" aria-labelledby="sh-h">
+  <div class="dlg">
+    <h3 id="sh-h">今日戰績</h3>
+    <label class="sr" for="sh-text">文字</label>
+    <textarea id="sh-text" readonly></textarea>
+    <small class="hint">這裡沒辦法直接寫入剪貼簿,文字已經全選,自己複製一下。</small>
+    <div class="dlg-act"><span class="spacer"></span><button class="btn primary" type="button" id="sh-close">好</button></div>
+  </div>
+</dialog>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- constants ---------- */
+const TYPES = {
+  pee:   { name: '尿尿', emoji: '💦', key: '1' },
+  poop:  { name: '拉屎', emoji: '💩', key: '2' },
+  smoke: { name: '抽菸', emoji: '🚬', key: '3' }
+};
+const ORDER = ['pee', 'poop', 'smoke'];
+const DEFAULTS = { shiftHours: 9, salary: 0 };
+const H = 3600000, M = 60000, DAY = 86400000;
+const WD = '日一二三四五六';
+const LS_DATA = 'paid-punch-clock:data:v1';
+const LS_PREF = 'paid-punch-clock:pref:v1';
+
+const S = {
+  mode: 'loading', ready: false, syncBroken: false,
+  settings: { ...DEFAULTS }, days: {},
+  viewDate: null, range: '7', now: Date.now(),
+  dismissStale: null, showAllRows: false
+};
+let coll = null;
+const WQ = {};
+
+/* ---------- small helpers ---------- */
+const $ = id => document.getElementById(id);
+function h(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+const pad = n => String(n).padStart(2, '0');
+const dkey = t => { const d = new Date(t); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+const todayKey = () => dkey(Date.now());
+const kDate = k => { const p = k.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); };
+const addDays = (k, n) => { const d = kDate(k); d.setDate(d.getDate() + n); return dkey(d.getTime()); };
+const mdw = k => { const d = kDate(k); return (d.getMonth() + 1) + '/' + pad(d.getDate()) + ' (' + WD[d.getDay()] + ')'; };
+const md = k => { const d = kDate(k); return (d.getMonth() + 1) + '/' + pad(d.getDate()); };
+const hm = t => { const d = new Date(t); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+const hms = ms => { const s = Math.floor(Math.max(0, ms) / 1000); return pad(Math.floor(s / 3600)) + ':' + pad(Math.floor(s % 3600 / 60)) + ':' + pad(s % 60); };
+const clockNow = t => { const d = new Date(t); return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); };
+const short = ms => { const s = Math.floor(Math.max(0, ms) / 1000); const hh = Math.floor(s / 3600); return (hh ? hh + ':' + pad(Math.floor(s % 3600 / 60)) : pad(Math.floor(s / 60))) + ':' + pad(s % 60); };
+function dur(ms) {
+  ms = Math.max(0, ms);
+  if (ms < M) return Math.round(ms / 1000) + ' 秒';
+  const m = Math.round(ms / M);
+  if (m < 60) return m + ' 分';
+  const hh = Math.floor(m / 60), r = m % 60;
+  return hh + ' 小時' + (r ? ' ' + r + ' 分' : '');
+}
+const minOfDay = t => { const d = new Date(t); return d.getHours() * 60 + d.getMinutes(); };
+const fmtMin = m => { m = Math.round(m); return pad(Math.floor(m / 60) % 24) + ':' + pad(m % 60); };
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const clone = o => JSON.parse(JSON.stringify(o));
+const money = v => 'NT$ ' + (v >= 100 ? Math.round(v).toLocaleString('zh-TW') : v.toFixed(1));
+const money2 = v => 'NT$ ' + (Math.floor(v * 100) / 100).toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/* ---------- salary model ----------
+   The month's salary accrues on its own, second by second, from the 1st at 00:00 to the end of the month,
+   whether or not you punched in. Paid toilet time uses the labor-law hourly rate (salary ÷ 30 ÷ 8). */
+const mkOf = k => k.slice(0, 7);
+const hasSal = () => (Number(S.settings.salary) || 0) > 0;
+const lawHourly = () => hasSal() ? Number(S.settings.salary) / 30 / 8 : 0;
+function monthSpan(mk) { const p = mk.split('-').map(Number); return [new Date(p[0], p[1] - 1, 1).getTime(), new Date(p[0], p[1], 1).getTime()]; }
+function accrued(mk, from, to) {
+  if (!hasSal()) return 0;
+  const sp = monthSpan(mk), lo = Math.max(sp[0], from), hi = Math.min(sp[1], to);
+  return hi > lo ? Number(S.settings.salary) * (hi - lo) / (sp[1] - sp[0]) : 0;
+}
+const toInput = t => { const d = new Date(t); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+const fromInput = v => { const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(v || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime() : null; };
+const floorHour = t => { const d = new Date(t); d.setMinutes(0, 0, 0); return d.getTime(); };
+const ceilHour = t => { const f = floorHour(t); return f === t ? t : f + H; };
+const reduceMotion = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- day model ---------- */
+function normDay(b) {
+  return {
+    date: b.date,
+    start: typeof b.start === 'number' ? b.start : null,
+    end: typeof b.end === 'number' ? b.end : null,
+    shiftHours: Number(b.shiftHours) || S.settings.shiftHours,
+    breaks: Array.isArray(b.breaks)
+      ? b.breaks.filter(x => x && TYPES[x.type] && typeof x.start === 'number')
+          .map(x => ({ id: String(x.id || newId()), type: x.type, start: x.start, end: typeof x.end === 'number' ? x.end : null }))
+      : []
+  };
+}
+const newDay = date => ({ date, start: null, end: null, shiftHours: S.settings.shiftHours, breaks: [] });
+const hasData = d => !!d && (d.start != null || d.breaks.length > 0);
+const tgt = d => d.start + (d.shiftHours || S.settings.shiftHours) * H;
+const bEnd = b => b.end == null ? S.now : b.end;
+function openDay() { let best = null; for (const d of Object.values(S.days)) if (d.start != null && d.end == null && (!best || d.start > best.start)) best = d; return best; }
+function activeBreak() { for (const d of Object.values(S.days)) for (const b of d.breaks) if (b.end == null) return { day: d, b }; return null; }
+function ctxDate() { const o = openDay(); return o ? o.date : todayKey(); }
+
+function dayStats(d) {
+  const r = { work: 0, brk: 0, paidMs: 0, paid: 0, by: {} };
+  ORDER.forEach(t => { r.by[t] = { n: 0, ms: 0, max: 0 }; });
+  const se = d.start != null ? (d.end == null ? S.now : d.end) : null;
+  if (se != null) r.work = Math.max(0, se - d.start);
+  for (const b of d.breaks) {
+    const e = bEnd(b), x = Math.max(0, e - b.start), s = r.by[b.type];
+    s.n++; s.ms += x; if (x > s.max) s.max = x; r.brk += x;
+    if (se != null) r.paidMs += Math.max(0, Math.min(e, se) - Math.max(b.start, d.start));
+  }
+  r.paid = r.paidMs / H * lawHourly();
+  return r;
+}
+
+/* ---------- persistence ---------- */
+function persistDay(date) {
+  const d = S.days[date];
+  const empty = !hasData(d);
+  if (empty) delete S.days[date];
+  if (S.mode === 'cloud') queueWrite('d' + date, empty ? null : clone(d));
+  else saveLocal();
+}
+function persistSettings() {
+  if (S.mode === 'cloud') queueWrite('settings', { shiftHours: S.settings.shiftHours, salary: S.settings.salary });
+  else saveLocal();
+}
+function queueWrite(id, body) {
+  const q = WQ[id] || (WQ[id] = { inflight: false, has: false, body: null, retried: false });
+  q.has = true; q.body = body; q.retried = false;
+  if (!q.inflight) flush(id);
+}
+async function flush(id) {
+  const q = WQ[id];
+  if (!q) return;
+  if (!q.has) { delete WQ[id]; return; }
+  q.inflight = true; q.has = false;
+  const body = q.body;
+  try {
+    const ref = coll.doc(id);
+    if (body === null) await ref.delete(); else await ref.set(body);
+    S.syncBroken = false;
+  } catch (e) {
+    const code = e && e.code;
+    if (code === 'unavailable' && !q.retried && !q.has) {
+      q.retried = true;
+      await new Promise(r => setTimeout(r, 600 + Math.random() * 900));
+      if (!q.has) { q.has = true; q.body = body; }
+    } else {
+      S.syncBroken = true;
+      toast(code === 'quota_exceeded' ? '雲端空間滿了,這筆沒存到。' : '這筆沒存到雲端,重新整理頁面再試一次。');
+    }
+    renderChip();
+  }
+  q.inflight = false;
+  flush(id);
+}
+function saveLocal() {
+  if (S.mode !== 'local') return;
+  try { localStorage.setItem(LS_DATA, JSON.stringify({ settings: S.settings, days: S.days })); }
+  catch (e) { S.mode = 'memory'; renderChip(); }
+}
+function savePref() { try { localStorage.setItem(LS_PREF, JSON.stringify({ range: S.range })); } catch (e) {} }
+function loadPref() { try { const p = JSON.parse(localStorage.getItem(LS_PREF) || 'null'); if (p && ['7', '30', '90', 'all'].includes(p.range)) S.range = p.range; } catch (e) {} }
+
+function useLocal() {
+  let ok = true, saved = null;
+  try { localStorage.setItem(LS_DATA + ':probe', '1'); localStorage.removeItem(LS_DATA + ':probe'); saved = JSON.parse(localStorage.getItem(LS_DATA) || 'null'); }
+  catch (e) { ok = false; }
+  S.mode = ok ? 'local' : 'memory';
+  if (saved) {
+    S.settings = { ...DEFAULTS, ...(saved.settings || {}) };
+    const days = {};
+    Object.values(saved.days || {}).forEach(b => { if (b && b.date) days[b.date] = normDay(b); });
+    S.days = days;
+  }
+  S.ready = true;
+  render();
+}
+const LS_INSTALL = 'paid-punch-clock:install-hint-dismissed';
+function showInstallHint() {
+  let dismissed = false;
+  try { dismissed = localStorage.getItem(LS_INSTALL) === '1'; } catch (e) {}
+  const standalone = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  $('install').hidden = standalone || !ios || dismissed;
+}
+function init() {
+  loadPref();
+  useLocal();
+  setInterval(tick, 1000);
+  showInstallHint();
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {}
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+}
+
+/* ---------- actions ---------- */
+function punch() {
+  if (!S.ready) return;
+  const now = Date.now(); S.now = now;
+  const o = openDay();
+  if (o) {
+    const a = activeBreak();
+    if (a) { a.b.end = now; if (a.day !== o) persistDay(a.day.date); }
+    o.end = now;
+    persistDay(o.date);
+    render(); stampFx();
+    toast('下班卡 ' + hm(now) + ' · 今天工時 ' + dur(now - o.start));
+    return;
+  }
+  const k = todayKey();
+  const day = S.days[k] || (S.days[k] = newDay(k));
+  if (day.start != null && day.end != null) return;
+  day.start = now; day.end = null; day.shiftHours = S.settings.shiftHours;
+  persistDay(k);
+  render(); stampFx();
+  toast('上班卡 ' + hm(now) + ' · 預計 ' + hm(tgt(day)) + ' 下班');
+}
+function unpunch() {
+  const d = S.days[todayKey()];
+  if (!d || d.end == null || openDay()) return;
+  d.end = null; persistDay(d.date); render();
+  toast('已撤銷下班,繼續計時');
+}
+function toggleBreak(type) {
+  if (!S.ready) return;
+  const now = Date.now(); S.now = now;
+  const a = activeBreak();
+  if (a) {
+    a.b.end = now; persistDay(a.day.date);
+    if (a.b.type === type) { render(); toast(TYPES[type].emoji + ' ' + TYPES[type].name + '結束 · ' + dur(now - a.b.start)); return; }
+  }
+  const k = ctxDate();
+  const day = S.days[k] || (S.days[k] = newDay(k));
+  day.breaks.push({ id: newId(), type, start: now, end: null });
+  persistDay(k);
+  render();
+}
+function stampFx() {
+  if (reduceMotion()) return;
+  const v = $('cd-value'); v.classList.remove('thunk'); void v.offsetWidth; v.classList.add('thunk');
+}
+
+/* ---------- tooltip & toast ---------- */
+const tip = $('tip');
+function placeTip(e) {
+  let x, y;
+  if (e && e.type && e.type.startsWith('pointer')) { x = e.clientX; y = e.clientY; }
+  else { const r = e.currentTarget.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top; }
+  const w = tip.offsetWidth, ht = tip.offsetHeight;
+  let L = x + 14, T = y - ht - 12;
+  if (L + w > innerWidth - 8) L = x - w - 14;
+  if (L < 8) L = 8;
+  if (T < 8) T = y + 18;
+  tip.style.left = L + 'px'; tip.style.top = T + 'px';
+}
+function bindTip(el, fn) {
+  const show = e => { const lines = fn(); tip.replaceChildren(); lines.forEach((l, i) => tip.append(h('div', i === 0 ? 'v' : 'l', l))); tip.hidden = false; placeTip(e); };
+  el.addEventListener('pointerenter', show);
+  el.addEventListener('pointermove', e => { if (!tip.hidden) placeTip(e); });
+  el.addEventListener('pointerleave', () => { tip.hidden = true; });
+  el.addEventListener('focus', show);
+  el.addEventListener('blur', () => { tip.hidden = true; });
+}
+let toastT = 0;
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2800); }
+
+/* ---------- render: header & banner ---------- */
+function renderChip() {
+  const c = $('sync-chip');
+  c.className = 'chip';
+  if (S.mode === 'loading') c.textContent = '連線中…';
+  else if (S.syncBroken) c.textContent = '同步中斷 · 請重新整理';
+  else if (S.mode === 'cloud') { c.textContent = '雲端同步'; c.classList.add('cloud'); }
+  else if (S.mode === 'local') { c.textContent = '存在這支手機'; c.classList.add('local'); }
+  else c.textContent = '這裡無法存檔';
+}
+function renderBanner() {
+  const o = openDay(), b = $('stale');
+  const stale = o && o.date !== todayKey() && S.dismissStale !== o.date;
+  b.hidden = !stale;
+  if (!stale) return;
+  $('stale-title').textContent = md(o.date) + ' 的班還沒打下班卡';
+  const inp = $('stale-end');
+  if (document.activeElement !== inp) inp.value = toInput(Math.min(tgt(o), Date.now()));
+}
+
+/* ---------- render: today card ---------- */
+function renderToday() {
+  const now = S.now, o = openDay(), tk = todayKey(), td = S.days[tk];
+  $('hdr-date').textContent = mdw(tk);
+  const lab = $('cd-label'), val = $('cd-value'), sub = $('cd-sub'), prog = $('cd-prog'), pb = $('punch'), cap = $('punch-cap');
+  sub.replaceChildren();
+  const add = (k, v) => { const s = h('span', null, k); s.append(h('b', null, v)); sub.append(s); };
+  if (o) {
+    const T = tgt(o), left = T - now;
+    lab.textContent = left >= 0 ? '距離下班' : '加班中';
+    val.textContent = (left >= 0 ? '' : '+') + hms(Math.abs(left));
+    add('上班', hm(o.start) + (o.date !== tk ? ' ' + md(o.date) : ''));
+    add('表定下班', hm(T));
+    add('已上班', short(now - o.start));
+    prog.hidden = false;
+    prog.firstElementChild.style.width = Math.max(0, Math.min(100, (now - o.start) / (T - o.start) * 100)) + '%';
+    pb.textContent = '下班'; pb.classList.add('out'); pb.disabled = !S.ready;
+    cap.textContent = '按一下打下班卡'; cap.hidden = false;
+    $('unpunch').hidden = true;
+  } else if (td && td.start != null && td.end != null) {
+    lab.textContent = '今天已下班 · 工時';
+    val.textContent = hms(td.end - td.start);
+    add('上班', hm(td.start)); add('下班', hm(td.end));
+    prog.hidden = true;
+    pb.textContent = '已下班'; pb.classList.add('out'); pb.disabled = true;
+    cap.hidden = true;
+    $('unpunch').hidden = !S.ready;
+  } else {
+    lab.textContent = S.ready ? '還沒上班 · 現在時間' : '讀取考勤卡…';
+    val.textContent = clockNow(now);
+    const s = h('span', null, '按「上班」開始倒數 ' + S.settings.shiftHours + ' 小時');
+    sub.append(s);
+    prog.hidden = true;
+    pb.textContent = '上班'; pb.classList.remove('out'); pb.disabled = !S.ready;
+    cap.textContent = '打卡'; cap.hidden = false;
+    $('unpunch').hidden = true;
+  }
+  const a = activeBreak(), cd = S.days[ctxDate()], st = cd ? dayStats(cd) : null;
+  const rate = lawHourly();
+  document.querySelectorAll('.brk').forEach(btn => {
+    const t = btn.dataset.type, on = !!(a && a.b.type === t);
+    btn.classList.toggle('on', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.disabled = !S.ready;
+    btn.querySelector('.occupied').hidden = !on;
+    const live = btn.querySelector('.live'), earn = btn.querySelector('.earn');
+    live.hidden = !on; earn.hidden = !(on && rate > 0);
+    if (on) { live.textContent = short(now - a.b.start); if (rate > 0) earn.textContent = '這次已賺 ' + money((now - a.b.start) / H * rate); }
+    const s = st ? st.by[t] : { n: 0, ms: 0 };
+    btn.querySelector('.meta').textContent = on ? '再按一次結束' : (s.n ? '今天 ' + s.n + ' 次 · ' + dur(s.ms) : '今天還沒去');
+    btn.setAttribute('aria-label', TYPES[t].name + (on ? ',進行中,按下結束' : ',按下開始'));
+  });
+}
+function renderPaid() {
+  const cd = S.days[ctxDate()], st = cd ? dayStats(cd) : null, p = $('paid'), rate = hasSal() ? 1 : 0;
+  p.replaceChildren();
+  if (!st || !st.brk) p.append('今天還沒摸魚。');
+  else {
+    p.append('今日摸魚 ', h('b', null, dur(st.brk)));
+    if (st.work) p.append(' · 摸魚率 ', h('b', null, Math.round(st.brk / st.work * 100) + '%'));
+    if (rate > 0) p.append(' · 帶薪收入 ', h('b', null, money(st.paid)));
+  }
+  $('paid-setup').hidden = rate > 0;
+}
+function renderBadges() {
+  const k = ctxDate(), d = S.days[k], st = d ? dayStats(d) : null, rate = hasSal() ? 1 : 0;
+  const list = [
+    { e: '🌅', n: '早鳥打卡', ok: !!(d && d.start != null && minOfDay(d.start) < 9 * 60), how: '9 點前打上班卡' },
+    { e: '🎰', n: '三寶齊全', ok: !!(st && ORDER.every(t => st.by[t].n > 0)), how: '尿尿、拉屎、抽菸今天都有' },
+    { e: '🚰', n: '水分充足', ok: !!(st && st.by.pee.n >= 5), how: '一天尿尿 5 次以上' },
+    { e: '💰', n: '帶薪百元', ok: !!(st && rate > 0 && st.paid >= 100), how: rate > 0 ? '上班時間摸魚賺到 NT$100' : '要先在設定填月薪' },
+    { e: '🔔', n: '準點下班', ok: !!(d && d.start != null && d.end != null && d.end >= tgt(d) - M && d.end <= tgt(d) + 15 * M), how: '表定時間到 15 分鐘內打下班卡' }
+  ];
+  const host = $('badges'); host.replaceChildren();
+  list.forEach(b => {
+    const s = h('span', 'badge' + (b.ok ? ' on' : ''));
+    s.tabIndex = 0;
+    s.append(h('span', 'e', b.e), document.createTextNode(b.n));
+    s.setAttribute('aria-label', b.n + (b.ok ? '(今天已解鎖)' : '(未解鎖)') + ':' + b.how);
+    bindTip(s, () => [b.ok ? '今天解鎖了' : '還沒解鎖', b.n + ':' + b.how]);
+    host.append(s);
+  });
+}
+
+/* ---------- render: payroll ---------- */
+let PAYCELLS = {}, PAY_LIVE = false;
+function payModel(at) {
+  const tk = dkey(at), mk = mkOf(tk), sp = monthSpan(mk), len = sp[1] - sp[0], sal = Number(S.settings.salary) || 0;
+  let worked = 0;
+  for (const d of Object.values(S.days)) if (mkOf(d.date) === mk && d.start != null) worked++;
+  return {
+    mk, worked, left: sp[1] - at,
+    earned: accrued(mk, sp[0], at),
+    today: accrued(mk, kDate(tk).getTime(), at),
+    daily: sal * DAY / len,
+    perSec: sal * 1000 / len
+  };
+}
+function fmtLeft(ms) {
+  const d = Math.floor(ms / DAY), hh = Math.floor(ms % DAY / H);
+  return d ? d + ' 天 ' + hh + ' 小時' : hh + ' 小時 ' + Math.floor(ms % H / M) + ' 分';
+}
+function paintPayAmount(v) {
+  const f = (Math.floor(v * 100) / 100).toFixed(2).split('.');
+  $('pay-amt').textContent = Number(f[0]).toLocaleString('zh-TW');
+  $('pay-dec').textContent = '.' + f[1];
+}
+function cellLines(k) {
+  const now = Date.now(), d = S.days[k], s = kDate(k).getTime();
+  const L = [money2(accrued(mkOf(k), s, Math.min(s + DAY, now))), mdw(k) + (now >= s + DAY ? ' · 日薪全額入帳' : ' · 入帳中')];
+  if (d && d.start != null) L.push('打卡 ' + hm(d.start) + ' → ' + (d.end == null ? '還在上班' : hm(d.end)));
+  else L.push('沒有打卡紀錄,薪水照樣入帳', '點一下可以補登上下班');
+  return L;
+}
+const dayFrac = (k, now) => Math.max(0, Math.min(1, (now - kDate(k).getTime()) / DAY));
+function buildPayStrip(mk) {
+  const p = mk.split('-').map(Number), n = new Date(p[0], p[1], 0).getDate(), tk = todayKey(), tDay = Number(tk.slice(8));
+  const cal = $('pay-cal'), lab = $('pay-days');
+  cal.replaceChildren(); lab.replaceChildren();
+  cal.style.setProperty('--n', n); lab.style.setProperty('--n', n);
+  PAYCELLS = {};
+  const sal = hasSal();
+  for (let i = 1; i <= n; i++) {
+    const k = mk + '-' + pad(i), fut = k > tk, rec = !!(S.days[k] && S.days[k].start != null);
+    const c = h('button', 'pc' + (rec ? ' rec' : '') + (fut ? ' fut' : '') + (k === tk ? ' today' : ''));
+    c.type = 'button';
+    const fill = h('i');
+    fill.style.height = (sal ? dayFrac(k, S.now) * 100 : 0) + '%';
+    c.append(fill);
+    PAYCELLS[k] = fill;
+    if (fut) { c.disabled = true; c.setAttribute('aria-label', mdw(k) + ',還沒到'); }
+    else {
+      c.setAttribute('aria-label', cellLines(k).join(','));
+      bindTip(c, () => cellLines(k));
+      c.addEventListener('click', () => {
+        const d = S.days[k];
+        if (d && d.start != null) {
+          S.viewDate = k === ctxDate() ? null : k;
+          renderTimeline(); renderLog(); renderGantt();
+          $('tl-h').scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
+        } else openEdit(k, 'shift');
+      });
+    }
+    cal.append(c);
+    const showLabel = i === tDay || ((i === 1 || i % 5 === 0) && Math.abs(i - tDay) > 1);
+    lab.append(h('span', i === tDay ? 't' : null, showLabel ? String(i) : ''));
+  }
+}
+function renderPay(full) {
+  const sal = hasSal(), mk = mkOf(todayKey());
+  $('pay-h').textContent = Number(mk.slice(5)) + ' 月薪水累積';
+  $('pay-empty').hidden = !S.ready || sal;
+  $('pay-body').hidden = S.ready && !sal;
+  const pill = $('pay-state');
+  if (!S.ready || !sal) {
+    pill.hidden = true; PAY_LIVE = false;
+    if (!S.ready) { $('pay-amt').textContent = '—'; $('pay-dec').textContent = ''; }
+    if (full) buildPayStrip(mk);
+    return;
+  }
+  const m = payModel(S.now);
+  PAY_LIVE = true;
+  paintPayAmount(m.earned);
+  pill.hidden = false;
+  pill.className = 'pay-state live';
+  pill.textContent = '24 小時自動計薪';
+  const sub = $('pay-sub'); sub.replaceChildren();
+  const item = (k, v) => { const s = h('span', null, k + ' '); s.append(h('b', null, v)); sub.append(s); };
+  item('今天', '+' + money2(m.today));
+  item('每秒', '+NT$ ' + m.perSec.toFixed(4));
+  item('日薪', money2(m.daily));
+  const pct = m.earned / Number(S.settings.salary) * 100;
+  $('pay-bar').firstElementChild.style.width = Math.min(100, pct) + '%';
+  if (full || S.now % 5000 < 1000) {
+    let paid = 0;
+    for (const d of Object.values(S.days)) if (mkOf(d.date) === mk) paid += dayStats(d).paid;
+    const g = $('pay-goal'); g.replaceChildren();
+    const gi = (pre, v, post) => { const s = h('span', null, pre); s.append(h('b', null, v)); if (post) s.append(post); g.append(s); };
+    gi('月薪 ' + money(Number(S.settings.salary)) + ' 的 ', pct.toFixed(1) + '%');
+    gi('距離月底 ', fmtLeft(m.left));
+    gi('本月打卡 ', String(m.worked), ' 天');
+    if (paid > 0) gi('帶薪摸魚 ', money(paid));
+  }
+  const tk = todayKey();
+  if (full || !PAYCELLS[tk]) buildPayStrip(mk);
+  else PAYCELLS[tk].style.height = dayFrac(tk, S.now) * 100 + '%';
+}
+function payFast() {
+  if (!PAY_LIVE || document.hidden || reduceMotion()) return;
+  paintPayAmount(payModel(Date.now()).earned);
+}
+
+/* ---------- render: timeline ---------- */
+let TL = null;
+function place(el, s, e, pos) { const l = pos(s), r = pos(e); el.style.left = l + '%'; el.style.width = Math.max(0, r - l) + '%'; }
+function renderTimeline() {
+  const date = S.viewDate || ctxDate(), d = S.days[date], tk = todayKey();
+  const isLive = date === ctxDate() || date === tk;
+  $('tl-h').textContent = (date === tk ? '今天 ' : '') + mdw(date);
+  $('tl-today').hidden = !S.viewDate || S.viewDate === ctxDate();
+  let lo = Infinity, hi = -Infinity;
+  const see = t => { if (t == null) return; if (t < lo) lo = t; if (t > hi) hi = t; };
+  if (d) {
+    see(d.start);
+    if (d.start != null) { see(d.end == null ? S.now : d.end); see(tgt(d)); }
+    d.breaks.forEach(b => { see(b.start); see(bEnd(b)); });
+  }
+  if (isLive && hasData(d)) see(S.now);
+  const base = kDate(date).getTime();
+  if (!isFinite(lo)) { lo = base + 8 * H; hi = base + 19 * H; if (date === tk) { lo = Math.min(lo, S.now - H); hi = Math.max(hi, S.now + 2 * H); } }
+  let a0 = floorHour(lo), a1 = ceilHour(hi);
+  const running = !!(d && (d.start != null && d.end == null || d.breaks.some(b => b.end == null)));
+  if (isLive && running) a1 = Math.max(a1, ceilHour(S.now + 20 * M));
+  if (a1 - a0 < 6 * H) a1 = a0 + 6 * H;
+  const span = a1 - a0, pos = t => (t - a0) / span * 100;
+  const wrap = $('tl'); wrap.replaceChildren();
+  const maxLabels = Math.max(3, Math.floor((wrap.clientWidth || 640) / 58));
+  const stepH = [1, 2, 3, 4, 6, 12].find(s => span / H / s <= maxLabels) || 12;
+  const axis = h('div', 'tl-axis'), lane = h('div', 'tl-lane');
+  for (let t = a0, i = 0; t <= a1; t += H, i++) {
+    const x = pos(t);
+    if (t > a0 && t < a1) { const g = h('i', 'tl-grid'); g.style.left = x + '%'; lane.append(g); }
+    if (i % stepH) continue;
+    const lb = h('span', 'tl-tick', pad(new Date(t).getHours()) + ':00');
+    lb.style.left = x + '%';
+    if (t === a0) lb.classList.add('first');
+    if (t === a1) lb.classList.add('last');
+    axis.append(lb);
+  }
+  const refs = { date, a0, a1, pos, shift: null, plan: null, now: null, active: null, day: d };
+  if (d && d.start != null) {
+    const sh = h('button', 'tl-shift'); sh.type = 'button';
+    place(sh, d.start, d.end == null ? S.now : d.end, pos);
+    sh.setAttribute('aria-label', '上班紀錄,點一下編輯');
+    bindTip(sh, () => [dur((d.end == null ? S.now : d.end) - d.start), '上班 ' + hm(d.start) + ' → ' + (d.end == null ? '還在上班' : '下班 ' + hm(d.end)), '表定 ' + d.shiftHours + ' 小時,' + hm(tgt(d)) + ' 下班']);
+    sh.addEventListener('click', () => openEdit(date, 'shift'));
+    lane.append(sh); refs.shift = sh;
+    const T = tgt(d);
+    if (d.end == null && T > S.now) { const pl = h('i', 'tl-plan'); place(pl, S.now, T, pos); lane.append(pl); refs.plan = pl; }
+    const tg = h('i', 'tl-target'); tg.style.left = pos(T) + '%'; lane.append(tg);
+  }
+  if (d) {
+    d.breaks.slice().sort((x, y) => x.start - y.start).forEach(b => {
+      const sg = h('button', 'tl-seg' + (b.end == null ? ' live' : '')); sg.type = 'button';
+      sg.style.setProperty('--c', 'var(--' + b.type + ')');
+      place(sg, b.start, bEnd(b), pos);
+      sg.setAttribute('aria-label', TYPES[b.type].name + ' ' + hm(b.start) + ',點一下編輯');
+      bindTip(sg, () => [dur(bEnd(b) - b.start), TYPES[b.type].emoji + ' ' + TYPES[b.type].name, hm(b.start) + ' – ' + (b.end == null ? '進行中' : hm(b.end))]);
+      sg.addEventListener('click', () => openEdit(date, 'break', b.id));
+      lane.append(sg);
+      if (b.end == null) refs.active = { el: sg, b };
+    });
+  }
+  if (S.now >= a0 && S.now <= a1 && (date === tk || isLive)) { const nw = h('i', 'tl-now'); nw.style.left = pos(S.now) + '%'; lane.append(nw); refs.now = nw; }
+  if (!hasData(d)) lane.append(h('div', 'tl-empty', date === tk ? '還是空白的一天。打上班卡,或按 💦 💩 🚬 開始記。' : '這天沒有紀錄。'));
+  wrap.append(axis, lane);
+  TL = refs;
+}
+function timelineLive() {
+  if (!TL) return;
+  const d = TL.day;
+  if (S.now > TL.a1 - 5 * M && (TL.shift && d && d.end == null || TL.active)) { renderTimeline(); return; }
+  if (TL.shift && d && d.end == null) place(TL.shift, d.start, S.now, TL.pos);
+  if (TL.plan && d) { const T = tgt(d); if (T > S.now) place(TL.plan, S.now, T, TL.pos); else { TL.plan.remove(); TL.plan = null; } }
+  if (TL.active) place(TL.active.el, TL.active.b.start, S.now, TL.pos);
+  if (TL.now) TL.now.style.left = TL.pos(S.now) + '%';
+}
+
+/* ---------- render: log table ---------- */
+function renderLog() {
+  const date = S.viewDate || ctxDate(), d = S.days[date], t = $('log');
+  t.replaceChildren();
+  const rows = [];
+  if (d) {
+    if (d.start != null) rows.push({ k: 'in', t: d.start });
+    if (d.end != null) rows.push({ k: 'out', t: d.end });
+    d.breaks.forEach(b => rows.push({ k: 'brk', t: b.start, b }));
+  }
+  rows.sort((x, y) => x.t - y.t);
+  const em = $('log-empty');
+  em.hidden = rows.length > 0;
+  em.textContent = date === todayKey() ? '今天還沒有紀錄。按「上班」打第一張卡,或直接按 💦 💩 🚬。' : '這天沒有紀錄,可以用「補登一筆」補上。';
+  if (!rows.length) return;
+  const thead = h('thead'), hr = h('tr');
+  [['時刻', ''], ['項目', ''], ['時段', 'c-range'], ['時長', 'num'], ['', 'num']].forEach(([x, c]) => hr.append(h('th', c, x)));
+  thead.append(hr);
+  const tb = h('tbody');
+  rows.forEach(r => {
+    const tr = h('tr');
+    tr.append(h('td', 'stampcell', hm(r.t)));
+    const item = h('td'), span = h('span', 'item');
+    let range = '', len = '', act = null;
+    if (r.k === 'in') {
+      span.append(h('i', 'sw'), document.createTextNode('上班'));
+      range = '表定 ' + hm(tgt(d)) + ' 下班';
+      len = d.end == null ? '上班中' : '';
+      act = () => openEdit(date, 'shift');
+    } else if (r.k === 'out') {
+      span.append(h('i', 'sw'), document.createTextNode('下班'));
+      range = '工時';
+      len = dur(d.end - d.start);
+      act = () => openEdit(date, 'shift');
+    } else {
+      const sw = h('i', 'sw'); sw.style.setProperty('--c', 'var(--' + r.b.type + ')');
+      span.append(sw, document.createTextNode(TYPES[r.b.type].emoji + ' ' + TYPES[r.b.type].name));
+      range = hm(r.b.start) + ' – ' + (r.b.end == null ? '進行中' : hm(r.b.end));
+      len = dur(bEnd(r.b) - r.b.start);
+      const id = r.b.id; act = () => openEdit(date, 'break', id);
+    }
+    item.append(span); tr.append(item);
+    tr.append(h('td', 'muted c-range', range));
+    tr.append(h('td', 'num', len));
+    const ac = h('td', 'num'); const eb = h('button', 'btn ghost small', '編輯'); eb.type = 'button'; eb.addEventListener('click', act); ac.append(eb); tr.append(ac);
+    tb.append(tr);
+  });
+  t.append(thead, tb);
+}
+
+/* ---------- sample data (shown only until there is real data) ---------- */
+let SAMPLE = null;
+function getSample() {
+  const tk = todayKey();
+  if (SAMPLE && SAMPLE.k === tk) return SAMPLE.days;
+  let seed = 20261001;
+  const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const days = {};
+  for (let i = 24; i >= 1; i--) {
+    const k = addDays(tk, -i), base = kDate(k), wd = base.getDay();
+    if (wd === 0 || wd === 6) continue;
+    const start = base.getTime() + (8 * 60 + 35 + Math.floor(rnd() * 50)) * M;
+    const end = start + (9 * 60 - 15 + Math.floor(rnd() * 80)) * M;
+    const ev = [];
+    const add = (type, n, lo, hi) => { for (let j = 0; j < n; j++) ev.push({ type, at: start + (15 + rnd() * ((end - start) / M - 50)) * M, len: (lo + rnd() * (hi - lo)) * M }); };
+    add('pee', 3 + Math.floor(rnd() * 4), 2, 6);
+    add('poop', Math.floor(rnd() * 2.4), 6, 16);
+    add('smoke', 2 + Math.floor(rnd() * 3), 5, 10);
+    ev.sort((a, b) => a.at - b.at);
+    let last = 0; const breaks = [];
+    ev.forEach((x, j) => { const s = Math.max(x.at, last + 8 * M), e = s + x.len; if (e > end - 5 * M) return; breaks.push({ id: 's' + i + '-' + j, type: x.type, start: Math.round(s), end: Math.round(e) }); last = e; });
+    days[k] = { date: k, start, end, shiftHours: 9, breaks };
+  }
+  SAMPLE = { k: tk, days };
+  return days;
+}
+function srcDays() {
+  const real = Object.values(S.days).some(hasData);
+  return real || S.mode === 'loading' && !S.ready ? { days: S.days, sample: false } : { days: getSample(), sample: true };
+}
+function rangeKeys(days) {
+  const tk = todayKey();
+  let n;
+  if (S.range === 'all') {
+    const ks = Object.keys(days).filter(k => hasData(days[k])).sort();
+    n = ks.length ? Math.round((kDate(tk) - kDate(ks[0])) / DAY) + 1 : 7;
+    n = Math.max(n, 7);
+  } else n = Number(S.range);
+  const out = [];
+  for (let i = n - 1; i >= 0; i--) out.push(addDays(tk, -i));
+  return out;
+}
+
+/* ---------- render: stats ---------- */
+function niceMax(v) {
+  if (v <= 0) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  for (const m of [1, 2, 4, 6, 8, 10]) if (m * p >= v) return m * p;
+  return 10 * p;
+}
+function colChart(host, cols, unit) {
+  host.replaceChildren();
+  const tot = c => ORDER.reduce((a, t) => a + c.parts[t], 0);
+  const max = niceMax(Math.max(0, ...cols.map(tot)));
+  const cc = h('div', 'cc'), yax = h('div', 'cc-y'), plot = h('div', 'cc-plot');
+  [0, max / 2, max].forEach(v => {
+    const y = v / max * 100;
+    if (v > 0) { const g = h('i', 'cc-grid'); g.style.bottom = y + '%'; plot.append(g); }
+    if (Number.isInteger(v)) { const lb = h('span', 'cc-yl', String(v)); lb.style.bottom = y + '%'; yax.append(lb); }
+  });
+  const bars = h('div', 'cc-bars'), xs = h('div', 'cc-x');
+  const every = Math.max(1, Math.ceil(cols.length / 8));
+  cols.forEach((c, i) => {
+    const col = h('div', 'cc-col'); col.tabIndex = 0;
+    const T = tot(c);
+    col.setAttribute('aria-label', c.tip.join(','));
+    if (T > 0) {
+      const stack = h('div', 'cc-stack'); stack.style.height = (T / max * 100) + '%';
+      ORDER.forEach(t => { if (c.parts[t] > 0) { const seg = h('i'); seg.style.flexGrow = String(c.parts[t]); seg.style.flexBasis = '0'; seg.style.setProperty('--c', 'var(--' + t + ')'); stack.append(seg); } });
+      col.append(stack);
+    }
+    bindTip(col, () => c.tip);
+    bars.append(col);
+    xs.append(h('span', null, (i % every === 0 || (every > 1 && i === cols.length - 1 && i % every > every / 2)) ? c.label : ''));
+  });
+  plot.append(bars);
+  cc.append(yax, plot, xs);
+  host.append(cc);
+  void unit;
+}
+function tile(lbl, val, sub) { const t = h('div', 'tile'); t.append(h('div', 'lbl', lbl), h('div', 'val', val), h('div', 'sub', sub || '')); return t; }
+function renderStats() {
+  const { days, sample } = srcDays();
+  $('sample-note').hidden = !sample;
+  document.querySelectorAll('.seg-btn').forEach(b => b.setAttribute('aria-pressed', b.dataset.range === S.range ? 'true' : 'false'));
+  const keys = rangeKeys(days);
+  const per = keys.map(k => ({ k, d: days[k], s: hasData(days[k]) ? dayStats(days[k]) : null }));
+  const T = { brk: 0, work: 0, paid: 0, paidMs: 0, by: {}, workdays: 0, active: 0, starts: [], ends: [], works: [] };
+  ORDER.forEach(t => { T.by[t] = { n: 0, ms: 0, max: 0, maxK: null }; });
+  per.forEach(({ k, d, s }) => {
+    if (!s) return;
+    T.active++; T.brk += s.brk; T.work += s.work; T.paid += s.paid; T.paidMs += s.paidMs;
+    ORDER.forEach(t => { const a = T.by[t], b = s.by[t]; a.n += b.n; a.ms += b.ms; if (b.n && (b.max > a.max || a.maxK == null)) { a.max = b.max; a.maxK = k; } });
+    if (d.start != null) { T.workdays++; T.starts.push(minOfDay(d.start)); if (d.end != null) { T.ends.push(minOfDay(d.end) + (dkey(d.end) !== k ? 1440 : 0)); T.works.push(d.end - d.start); } }
+  });
+  const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
+  const tiles = $('tiles'); tiles.replaceChildren();
+  tiles.append(tile('摸魚總時長', dur(T.brk), T.active ? '有紀錄的日子平均 ' + dur(T.brk / T.active) + ' / 天' : '這段期間還沒有紀錄'));
+  tiles.append(tile('摸魚率', T.work ? (T.brk / T.work * 100).toFixed(1) + '%' : '—', T.work ? '佔上班時間 ' + dur(T.work) : '打了上班卡才算得出來'));
+  tiles.append(tile('帶薪收入', hasSal() ? money(T.paid) : '—', hasSal() ? '上班時間內的摸魚,照你的時薪換算' : '到「設定」填月薪就會算'));
+  tiles.append(tile('平均上班 → 下班', T.starts.length ? fmtMin(avg(T.starts)) + ' → ' + (T.ends.length ? fmtMin(avg(T.ends)) : '—') : '—', T.works.length ? '平均工時 ' + dur(avg(T.works)) : '下班卡打過才會有'));
+  const fun = $('fun');
+  const movies = T.brk / (2 * H);
+  fun.textContent = T.brk >= 10 * M
+    ? '這段期間帶薪摸魚的時間,夠看 ' + (movies >= 10 ? Math.round(movies) : movies.toFixed(1)) + ' 部兩小時的電影,或滑 ' + Math.round(T.brk / (30 * 1000)).toLocaleString('zh-TW') + ' 支 30 秒的短影片。'
+    : '';
+  fun.hidden = !fun.textContent;
+
+  colChart($('ch-daily'), per.map(({ k, s }) => {
+    const parts = {}; ORDER.forEach(t => { parts[t] = s ? s.by[t].ms / M : 0; });
+    const tipLines = [s && s.brk ? dur(s.brk) : '沒有紀錄', mdw(k)];
+    if (s && s.brk) ORDER.forEach(t => { if (s.by[t].n) tipLines.push(TYPES[t].emoji + ' ' + TYPES[t].name + ' ' + s.by[t].n + ' 次 · ' + dur(s.by[t].ms)); });
+    return { label: md(k), parts, tip: tipLines };
+  }));
+
+  const hours = {}; for (let i = 0; i < 24; i++) hours[i] = { pee: 0, poop: 0, smoke: 0 };
+  let hmin = 24, hmax = -1;
+  per.forEach(({ d, s }) => { if (!s) return; d.breaks.forEach(b => { const hh = new Date(b.start).getHours(); hours[hh][b.type]++; hmin = Math.min(hmin, hh); hmax = Math.max(hmax, hh); }); });
+  if (hmax < 0) { hmin = 8; hmax = 19; }
+  hmin = Math.max(0, Math.min(hmin, 8)); hmax = Math.min(23, Math.max(hmax, hmin + 11));
+  const hc = [];
+  for (let i = hmin; i <= hmax; i++) {
+    const p = hours[i], n = p.pee + p.poop + p.smoke;
+    const lines = [n + ' 次', pad(i) + ':00 – ' + pad(i) + ':59'];
+    ORDER.forEach(t => { if (p[t]) lines.push(TYPES[t].emoji + ' ' + TYPES[t].name + ' ' + p[t] + ' 次'); });
+    hc.push({ label: pad(i), parts: p, tip: lines });
+  }
+  colChart($('ch-hour'), hc);
+
+  const tt = $('types'); tt.replaceChildren();
+  const th = h('thead'), tr = h('tr');
+  [['類別', ''], ['次數', 'num'], ['總時長', 'num'], ['平均一次', 'num'], ['最長一次', 'num'], ['每天幾次', 'num']].forEach(([x, c]) => tr.append(h('th', c, x)));
+  th.append(tr);
+  const tb = h('tbody');
+  ORDER.forEach(t => {
+    const a = T.by[t], r = h('tr');
+    const c1 = h('td'), it = h('span', 'item'), sw = h('i', 'sw'); sw.style.setProperty('--c', 'var(--' + t + ')');
+    it.append(sw, document.createTextNode(TYPES[t].emoji + ' ' + TYPES[t].name)); c1.append(it); r.append(c1);
+    r.append(h('td', 'num', String(a.n)));
+    r.append(h('td', 'num', a.n ? dur(a.ms) : '—'));
+    r.append(h('td', 'num', a.n ? dur(a.ms / a.n) : '—'));
+    r.append(h('td', 'num', a.n ? dur(a.max) + '(' + md(a.maxK) + ')' : '—'));
+    r.append(h('td', 'num', T.active ? (a.n / T.active).toFixed(1) : '—'));
+    tb.append(r);
+  });
+  tt.append(th, tb);
+}
+
+/* ---------- render: history (stacked time cards) ---------- */
+function renderGantt() {
+  const { days, sample } = srcDays();
+  const host = $('gantt'); host.replaceChildren();
+  $('g-hint').textContent = sample ? '範例預覽 · 你的每一天會像這樣疊起來' : '點一天,就會在上方時間軸打開';
+  const keys = rangeKeys(days).filter(k => hasData(days[k])).reverse();
+  if (!keys.length) { host.append(h('p', 'empty', '這段期間還沒有紀錄。')); return; }
+  let lo = Infinity, hi = -Infinity;
+  keys.forEach(k => {
+    const d = days[k], base = kDate(k).getTime(), see = t => { const m = (t - base) / M; if (m < lo) lo = m; if (m > hi) hi = m; };
+    if (d.start != null) { see(d.start); see(d.end == null ? S.now : d.end); }
+    d.breaks.forEach(b => { see(b.start); see(bEnd(b)); });
+  });
+  let a0 = Math.floor(lo / 60) * 60, a1 = Math.ceil(hi / 60) * 60;
+  if (a1 - a0 < 8 * 60) a1 = a0 + 8 * 60;
+  const span = a1 - a0, pos = m => (m - a0) / span * 100;
+  const trackW = Math.max(140, (host.clientWidth || 640) - (innerWidth <= 560 ? 130 : 200));
+  const stepH = [1, 2, 3, 4, 6, 12].find(s => span / 60 / s <= Math.max(3, Math.floor(trackW / 52))) || 12;
+  const step = 60;
+  const head = h('div', 'g-row g-head'), ax = h('div', 'g-axis');
+  head.append(h('span'), ax, h('span'));
+  for (let m = a0, i = 0; m <= a1; m += 60, i++) {
+    if (i % stepH) continue;
+    const lb = h('span', 'tl-tick', pad(Math.floor(m / 60) % 24) + ':00'); lb.style.left = pos(m) + '%';
+    if (m === a0) lb.classList.add('first'); if (m === a1) lb.classList.add('last');
+    ax.append(lb);
+  }
+  host.append(head);
+  const limit = S.showAllRows ? keys.length : Math.min(keys.length, 14);
+  const viewing = S.viewDate || ctxDate();
+  keys.slice(0, limit).forEach(k => {
+    const d = days[k], base = kDate(k).getTime(), st = dayStats(d), rel = t => (t - base) / M;
+    const row = h('button', 'g-row' + (!sample && k === viewing ? ' sel' : '')); row.type = 'button';
+    if (sample) row.disabled = true;
+    const gd = h('span', 'g-date', md(k)); gd.append(h('small', 'g-wd', ' ' + WD[kDate(k).getDay()]));
+    row.append(gd);
+    const tr = h('span', 'g-track');
+    for (let m = a0 + step; m < a1; m += step) { const g = h('i', 'tl-grid'); g.style.left = pos(m) + '%'; tr.append(g); }
+    if (d.start != null) { const sh = h('i', 'g-shift'); const l = pos(rel(d.start)), r = pos(rel(d.end == null ? S.now : d.end)); sh.style.left = l + '%'; sh.style.width = Math.max(0, r - l) + '%'; tr.append(sh); }
+    d.breaks.forEach(b => { const sg = h('i', 'g-seg'); sg.style.setProperty('--c', 'var(--' + b.type + ')'); const l = pos(rel(b.start)), r = pos(rel(bEnd(b))); sg.style.left = l + '%'; sg.style.width = Math.max(0, r - l) + '%'; tr.append(sg); });
+    row.append(tr);
+    row.append(h('span', 'g-tot', st.brk ? dur(st.brk) : '—'));
+    const lines = [st.brk ? '摸魚 ' + dur(st.brk) : '沒有摸魚', mdw(k) + (d.start != null ? ' · 上班 ' + hm(d.start) + (d.end != null ? ' → ' + hm(d.end) : '') : '')];
+    if (st.work) lines.push('工時 ' + dur(st.work) + (st.brk ? ' · 摸魚率 ' + Math.round(st.brk / st.work * 100) + '%' : ''));
+    const cnt = ORDER.filter(t => st.by[t].n).map(t => TYPES[t].emoji + st.by[t].n).join('  ');
+    if (cnt) lines.push(cnt);
+    bindTip(row, () => lines);
+    row.setAttribute('aria-label', lines.join(','));
+    if (!sample) row.addEventListener('click', () => {
+      S.viewDate = k === ctxDate() ? null : k;
+      renderTimeline(); renderLog(); renderGantt();
+      $('tl-h').scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
+    });
+    host.append(row);
+  });
+  if (keys.length > limit) {
+    const more = h('button', 'btn small more', '再顯示 ' + (keys.length - limit) + ' 天'); more.type = 'button';
+    more.addEventListener('click', () => { S.showAllRows = true; renderGantt(); });
+    host.append(more);
+  }
+}
+
+/* ---------- edit dialog ---------- */
+let EDIT = null;
+function openEdit(date, kind, id) {
+  EDIT = { date, kind, id, confirmDel: false };
+  const d = S.days[date];
+  const err = $('ed-err'); err.hidden = true;
+  const del = $('ed-del'); del.textContent = '刪除'; del.hidden = kind === 'new';
+  $('ed-type-f').hidden = kind === 'shift';
+  $('ed-hours-f').hidden = kind !== 'shift';
+  const st = $('ed-start'), en = $('ed-end');
+  if (kind === 'shift') {
+    const fresh = !(d && d.start != null), nine = kDate(date).getTime() + 9 * H;
+    $('ed-h').textContent = (fresh ? '補登 ' : '') + mdw(date) + ' 上下班';
+    $('ed-start-l').textContent = '上班時間'; $('ed-end-l').textContent = '下班時間';
+    $('ed-end-hint').textContent = '留空代表還在上班';
+    st.value = fresh ? toInput(nine) : toInput(d.start);
+    en.value = !fresh ? (d.end != null ? toInput(d.end) : '') : (date < todayKey() ? toInput(nine + S.settings.shiftHours * H) : '');
+    $('ed-hours').value = d ? d.shiftHours : S.settings.shiftHours;
+    del.textContent = '刪除上下班紀錄';
+    del.hidden = !(d && d.start != null);
+    EDIT.orig = d ? { s: d.start, e: d.end } : null;
+  } else {
+    $('ed-start-l').textContent = '開始'; $('ed-end-l').textContent = '結束';
+    $('ed-end-hint').textContent = '留空代表還在進行中';
+    if (kind === 'break') {
+      const b = d && d.breaks.find(x => x.id === id);
+      if (!b) return;
+      $('ed-h').textContent = '編輯 ' + TYPES[b.type].name;
+      $('ed-type').value = b.type;
+      st.value = toInput(b.start); en.value = b.end == null ? '' : toInput(b.end);
+      EDIT.orig = { s: b.start, e: b.end };
+    } else {
+      $('ed-h').textContent = '補登一筆 · ' + mdw(date);
+      const now = Date.now();
+      const endT = date === todayKey() ? now : kDate(date).getTime() + 15 * H;
+      $('ed-type').value = 'pee';
+      st.value = toInput(endT - 5 * M); en.value = toInput(endT);
+      EDIT.orig = null;
+    }
+  }
+  tip.hidden = true;
+  $('dlg-edit').showModal();
+}
+function editErr(msg) { const e = $('ed-err'); e.textContent = msg; e.hidden = false; }
+function saveEdit(ev) {
+  ev.preventDefault();
+  if (!EDIT) return;
+  const { date, kind, id, orig } = EDIT;
+  const sv = $('ed-start').value, evv = $('ed-end').value;
+  // keep the original seconds when a field was left unchanged
+  let s = orig && orig.s != null && sv === toInput(orig.s) ? orig.s : fromInput(sv);
+  let e = evv ? (orig && orig.e != null && evv === toInput(orig.e) ? orig.e : fromInput(evv)) : null;
+  if (s == null) return editErr('請填開始時間。');
+  if (e != null && e <= s) return editErr('結束要比開始晚。');
+  const day = S.days[date] || (S.days[date] = newDay(date));
+  if (kind === 'shift') {
+    const hrs = Math.min(24, Math.max(1, parseFloat($('ed-hours').value) || S.settings.shiftHours));
+    if (e == null) { const o = openDay(); if (o && o !== day) return editErr(md(o.date) + ' 的班還開著,同時只能有一個上班中的班。'); }
+    day.start = s; day.end = e; day.shiftHours = hrs;
+  } else {
+    const type = $('ed-type').value;
+    if (e == null) { const a = activeBreak(); if (a && a.b.id !== id) return editErr('已經有一筆「' + TYPES[a.b.type].name + '」在進行中,同時只能有一筆。'); }
+    if (kind === 'break') {
+      const b = day.breaks.find(x => x.id === id); if (!b) return;
+      b.type = type; b.start = s; b.end = e;
+    } else day.breaks.push({ id: newId(), type, start: s, end: e });
+  }
+  S.now = Date.now();
+  persistDay(date);
+  $('dlg-edit').close();
+  render();
+  toast('已儲存');
+}
+function deleteEdit() {
+  if (!EDIT) return;
+  const btn = $('ed-del');
+  if (!EDIT.confirmDel) { EDIT.confirmDel = true; btn.textContent = '確定刪除?再按一次'; return; }
+  const { date, kind, id } = EDIT, d = S.days[date];
+  if (d) {
+    if (kind === 'shift') { d.start = null; d.end = null; }
+    else d.breaks = d.breaks.filter(x => x.id !== id);
+    persistDay(date);
+  }
+  $('dlg-edit').close();
+  render();
+  toast('已刪除');
+}
+
+/* ---------- settings, share, export ---------- */
+function rateText() {
+  const sal = parseFloat($('set-salary').value) || 0, sp = monthSpan(mkOf(todayKey())), len = sp[1] - sp[0];
+  $('set-rate').textContent = sal > 0
+    ? '這個月每秒 +NT$ ' + (sal * 1000 / len).toFixed(4) + ',每天 ' + money2(sal * DAY / len) + ',24 小時自動入帳,不用打卡。帶薪如廁照勞基法時薪 ' + money2(sal / 240) + '(月薪 ÷ 30 ÷ 8)算。'
+    : '填了就會自動累積這個月賺多少,也能算帶薪如廁賺多少。';
+}
+function openSettings() {
+  $('set-hours').value = S.settings.shiftHours;
+  $('set-salary').value = S.settings.salary || '';
+  rateText();
+  $('set-store').textContent = S.mode === 'local'
+    ? '紀錄只存在這支手機的這個 App 裡,不會上傳到任何地方。刪掉 App 會連紀錄一起刪掉,偶爾按「備份全部資料」存一份到「檔案」。'
+    : '這裡不允許存檔(可能是私密瀏覽),關掉後紀錄會消失。';
+  $('dlg-set').showModal();
+}
+function saveSettings(ev) {
+  ev.preventDefault();
+  const hrs = Math.min(24, Math.max(1, parseFloat($('set-hours').value) || DEFAULTS.shiftHours));
+  const sal = Math.max(0, parseFloat($('set-salary').value) || 0);
+  S.settings = { ...S.settings, shiftHours: hrs, salary: sal };
+  persistSettings();
+  const o = openDay();
+  if (o && o.shiftHours !== hrs) { o.shiftHours = hrs; persistDay(o.date); }
+  $('dlg-set').close();
+  render();
+  toast('設定已儲存');
+}
+function shareText() {
+  const k = ctxDate(), d = S.days[k], st = d ? dayStats(d) : null, rate = hasSal() ? 1 : 0;
+  const L = ['【帶薪打卡鐘 ' + mdw(k) + '】'];
+  if (d && d.start != null) L.push('上班 ' + hm(d.start) + ' → ' + (d.end != null ? '下班 ' + hm(d.end) : '還在上班'));
+  ORDER.forEach(t => { const s = st ? st.by[t] : { n: 0, ms: 0 }; L.push(TYPES[t].emoji + ' ' + TYPES[t].name + ' ' + s.n + ' 次 · ' + dur(s.ms)); });
+  if (st && st.brk) L.push('帶薪摸魚 ' + dur(st.brk) + (st.work ? '(摸魚率 ' + Math.round(st.brk / st.work * 100) + '%)' : ''));
+  if (st && rate > 0) L.push('帶薪收入 ' + money(st.paid));
+  if (rate > 0) L.push(Number(mkOf(todayKey()).slice(5)) + ' 月薪水已累積 ' + money2(payModel(Date.now()).earned));
+  return L.join('\n');
+}
+function showText(title, txt) {
+  const ta = $('sh-text'); $('sh-h').textContent = title; ta.value = txt;
+  $('dlg-share').showModal(); ta.focus(); ta.select();
+}
+function copyShare() {
+  const txt = shareText();
+  const fallback = () => showText('今日戰績', txt);
+  try {
+    const p = navigator.clipboard && navigator.clipboard.writeText(txt);
+    if (!p) return fallback();
+    p.then(() => toast('已複製,貼給同事炫耀吧'), fallback);
+  } catch (e) { fallback(); }
+}
+function fullStamp(t) { const d = new Date(t); return dkey(t) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); }
+
+/* ---------- backup, export, import ---------- */
+function exportPayload() {
+  return JSON.stringify({
+    app: 'paid-punch-clock', version: 1, exportedAt: new Date().toISOString(),
+    settings: { shiftHours: S.settings.shiftHours, salary: S.settings.salary },
+    days: Object.keys(S.days).sort().map(k => S.days[k])
+  });
+}
+async function shareFile(filename, text, mime) {
+  let file = null;
+  try { file = new File([text], filename, { type: mime }); } catch (e) {}
+  if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); return true; }
+    catch (e) { if (e && e.name === 'AbortError') return false; }
+  }
+  try {
+    const url = URL.createObjectURL(file || new Blob([text], { type: mime }));
+    const a = document.createElement('a'); a.href = url; a.download = filename;
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    return true;
+  } catch (e) { showText('複製這段資料自己存起來', text); return false; }
+}
+function backupJson() { shareFile('paid-punch-clock-backup-' + todayKey() + '.json', exportPayload(), 'application/json'); }
+
+let PENDING = null, impT = 0;
+function parseImport(text) {
+  text = String(text || '').replace(/^﻿/, '').trim();
+  if (!text) return null;
+  if (text[0] === '{' || text[0] === '[') {
+    const o = JSON.parse(text);
+    const raw = Array.isArray(o) ? o : o.days;
+    const list = Array.isArray(raw) ? raw : Object.values(raw || {});
+    const days = list.filter(b => b && typeof b.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b.date)).map(normDay).filter(hasData);
+    return { days, settings: Array.isArray(o) ? null : (o.settings || null) };
+  }
+  const byName = {}; ORDER.forEach(t => { byName[TYPES[t].name] = t; });
+  const stamp = s => { const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/.exec((s || '').trim()); return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)).getTime() : null; };
+  const map = {};
+  text.split(/\r?\n/).forEach((ln, i) => {
+    const c = ln.split(',').map(x => x.replace(/^"|"$/g, '').trim());
+    if (c.length < 4 || !/^\d{4}-\d{2}-\d{2}$/.test(c[0])) return;
+    const s = stamp(c[2]), e = stamp(c[3]);
+    if (s == null) return;
+    const d = map[c[0]] || (map[c[0]] = newDay(c[0]));
+    if (c[1] === '上班') { d.start = s; d.end = e; }
+    else if (byName[c[1]]) d.breaks.push({ id: newId() + i, type: byName[c[1]], start: s, end: e });
+  });
+  return { days: Object.values(map).filter(hasData), settings: null };
+}
+function previewImport(text) {
+  const sum = $('imp-sum'), err = $('imp-err'), go = $('imp-go');
+  PENDING = null; go.disabled = true; sum.hidden = true; err.hidden = true;
+  if (!String(text || '').trim()) return;
+  let res = null;
+  try { res = parseImport(text); } catch (e) { res = null; }
+  if (!res || !res.days.length) {
+    err.textContent = '看不懂這份資料。請貼上網頁版「複製資料到 App」拿到的內容,或選 .json 備份檔、匯出的 CSV。';
+    err.hidden = false; return;
+  }
+  const shifts = res.days.filter(d => d.start != null).length, brks = res.days.reduce((a, d) => a + d.breaks.length, 0);
+  const keys = res.days.map(d => d.date).sort();
+  let msg = '找到 ' + res.days.length + ' 天(' + md(keys[0]) + ' – ' + md(keys[keys.length - 1]) + '):' + shifts + ' 次上下班、' + brks + ' 筆尿尿拉屎抽菸。';
+  const sal = res.settings && Number(res.settings.salary);
+  if (sal > 0) msg += '也會套用月薪 ' + money(sal) + '。';
+  msg += '同一天已經有的紀錄會合併,不會重複。';
+  sum.textContent = msg; sum.hidden = false;
+  PENDING = res; go.disabled = false;
+}
+function mergeImport(res) {
+  res.days.forEach(inc => {
+    const cur = S.days[inc.date];
+    if (!cur || !hasData(cur)) { S.days[inc.date] = inc; return; }
+    if (cur.start == null && inc.start != null) { cur.start = inc.start; cur.end = inc.end; cur.shiftHours = inc.shiftHours; }
+    else if (cur.start != null && inc.start != null && cur.end == null && inc.end != null && Math.abs(cur.start - inc.start) < M) cur.end = inc.end;
+    inc.breaks.forEach(b => {
+      const dup = cur.breaks.find(x => x.type === b.type && Math.abs(x.start - b.start) < M);
+      if (dup) { if (dup.end == null && b.end != null) dup.end = b.end; }
+      else cur.breaks.push({ ...b, id: cur.breaks.some(x => x.id === b.id) ? newId() : b.id });
+    });
+  });
+  if (res.settings) {
+    const sh = Number(res.settings.shiftHours), sa = Number(res.settings.salary);
+    if (sh >= 1 && sh <= 24) S.settings.shiftHours = sh;
+    if (sa > 0) S.settings.salary = sa;
+  }
+  saveLocal();
+  render();
+}
+function openImport() {
+  $('dlg-set').close();
+  $('imp-text').value = ''; $('imp-file').value = '';
+  previewImport('');
+  $('dlg-imp').showModal();
+}
+
+async function exportCsv() {
+  const rows = [['日期', '項目', '開始', '結束', '分鐘']];
+  Object.keys(S.days).sort().forEach(k => {
+    const d = S.days[k];
+    if (d.start != null) rows.push([k, '上班', fullStamp(d.start), d.end != null ? fullStamp(d.end) : '', d.end != null ? ((d.end - d.start) / M).toFixed(1) : '']);
+    d.breaks.slice().sort((a, b) => a.start - b.start).forEach(b => rows.push([k, TYPES[b.type].name, fullStamp(b.start), b.end != null ? fullStamp(b.end) : '', b.end != null ? ((b.end - b.start) / M).toFixed(1) : '']));
+  });
+  const csv = '﻿' + rows.map(r => r.map(c => /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c).join(',')).join('\r\n');
+  shareFile('paid-punch-clock-' + todayKey() + '.csv', csv, 'text/csv');
+}
+
+/* ---------- master render & clock ---------- */
+function render() {
+  S.now = Date.now();
+  if (S.viewDate && !hasData(S.days[S.viewDate]) && S.viewDate !== todayKey()) S.viewDate = null;
+  $('tl-add').disabled = !S.ready; $('btn-settings').disabled = !S.ready;
+  renderChip(); renderBanner(); renderToday(); renderPaid(); renderBadges();
+  renderPay(true); renderTimeline(); renderLog(); renderStats(); renderGantt();
+}
+let lastDay = todayKey(), tickN = 0;
+function tick() {
+  S.now = Date.now(); tickN++;
+  if (todayKey() !== lastDay) { lastDay = todayKey(); render(); return; }
+  renderToday(); timelineLive(); renderPay(false);
+  const busy = !!(activeBreak() || openDay());
+  if (tickN % 5 === 0) renderPaid();
+  if (activeBreak() && tickN % 15 === 0) renderLog();
+  if (busy && tickN % 60 === 0) { renderBadges(); renderStats(); renderGantt(); }
+}
+
+/* ---------- wiring ---------- */
+$('punch').addEventListener('click', punch);
+$('unpunch').addEventListener('click', unpunch);
+document.querySelectorAll('.brk').forEach(b => b.addEventListener('click', () => toggleBreak(b.dataset.type)));
+document.querySelectorAll('.seg-btn').forEach(b => b.addEventListener('click', () => { S.range = b.dataset.range; S.showAllRows = false; savePref(); renderStats(); renderGantt(); }));
+$('btn-settings').addEventListener('click', openSettings);
+$('paid-setup').addEventListener('click', openSettings);
+$('btn-share').addEventListener('click', copyShare);
+$('tl-today').addEventListener('click', () => { S.viewDate = null; renderTimeline(); renderLog(); renderGantt(); });
+$('tl-add').addEventListener('click', () => openEdit(S.viewDate || ctxDate(), 'new'));
+$('ed-form').addEventListener('submit', saveEdit);
+$('ed-cancel').addEventListener('click', () => $('dlg-edit').close());
+$('ed-del').addEventListener('click', deleteEdit);
+$('set-form').addEventListener('submit', saveSettings);
+$('set-cancel').addEventListener('click', () => $('dlg-set').close());
+$('set-salary').addEventListener('input', rateText);
+$('pay-setup').addEventListener('click', openSettings);
+setInterval(payFast, 100);
+$('set-export').addEventListener('click', exportCsv);
+$('set-backup').addEventListener('click', backupJson);
+$('set-import').addEventListener('click', openImport);
+$('imp-text').addEventListener('input', () => { clearTimeout(impT); impT = setTimeout(() => previewImport($('imp-text').value), 250); });
+$('imp-file').addEventListener('change', () => {
+  const f = $('imp-file').files && $('imp-file').files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { const t = String(r.result || ''); $('imp-text').value = t.length > 20000 ? '' : t; previewImport(t); };
+  r.onerror = () => { const e = $('imp-err'); e.textContent = '讀不到這個檔案,換一個試試。'; e.hidden = false; };
+  r.readAsText(f);
+});
+$('imp-cancel').addEventListener('click', () => $('dlg-imp').close());
+$('imp-go').addEventListener('click', () => {
+  if (!PENDING) return;
+  const n = PENDING.days.length;
+  mergeImport(PENDING); PENDING = null;
+  $('dlg-imp').close();
+  toast('匯入完成,共 ' + n + ' 天');
+});
+$('install-x').addEventListener('click', () => { $('install').hidden = true; try { localStorage.setItem(LS_INSTALL, '1'); } catch (e) {} });
+$('sh-close').addEventListener('click', () => $('dlg-share').close());
+$('stale-save').addEventListener('click', () => {
+  const o = openDay(); if (!o) return;
+  const t = fromInput($('stale-end').value);
+  if (t == null || t <= o.start) { toast('下班時間要比上班 ' + hm(o.start) + ' 晚。'); return; }
+  const a = activeBreak(); if (a && a.day === o) a.b.end = Math.max(a.b.start, Math.min(t, Date.now()));
+  o.end = t; persistDay(o.date); render();
+  toast(md(o.date) + ' 下班卡已補登 ' + hm(t));
+});
+$('stale-skip').addEventListener('click', () => { const o = openDay(); if (o) S.dismissStale = o.date; renderBanner(); });
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+  const tg = e.target && e.target.tagName;
+  if (tg === 'INPUT' || tg === 'SELECT' || tg === 'TEXTAREA') return;
+  if (document.querySelector('dialog[open]')) return;
+  const t = ORDER.find(x => TYPES[x].key === e.key);
+  if (t) { e.preventDefault(); toggleBreak(t); }
+});
+document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
+window.addEventListener('focus', () => render());
+window.addEventListener('scroll', () => { tip.hidden = true; }, { passive: true });
+
+init();
+})();
+</script>
+</body>
+</html>
